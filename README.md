@@ -1,6 +1,6 @@
 # LAFL Logistics Portal
 
-Modern logistics website and backend platform for lead capture, shipment visibility, and operations monitoring.
+Modern logistics platform with an Angular 21 frontend and Express backend for lead capture, shipment visibility, and operations monitoring.
 
 Live URL: [https://lafl-logistics-portal-496585032737.us-central1.run.app](https://lafl-logistics-portal-496585032737.us-central1.run.app)
 
@@ -8,7 +8,7 @@ Live URL: [https://lafl-logistics-portal-496585032737.us-central1.run.app](https
 
 This project was rebuilt end-to-end to demonstrate practical full-stack ownership:
 
-- polished responsive web experience
+- Angular 21 single-page frontend with responsive UX
 - production-style API design with validation
 - cloud-native persistence on Firestore
 - email notifications through Gmail SMTP
@@ -17,7 +17,7 @@ This project was rebuilt end-to-end to demonstrate practical full-stack ownershi
 
 ## Core Capabilities
 
-- Landing page with modern UI and logistics-focused content
+- Angular-routed pages for home, signup, and signup-success flows
 - Shipment tracking API and UI with issue-state simulation
 - Contact, quote, and signup workflows
 - Firestore persistence in cloud mode with local JSON fallback
@@ -34,7 +34,7 @@ This project was rebuilt end-to-end to demonstrate practical full-stack ownershi
 
 ```mermaid
 flowchart LR
-  A["Client Browser"] --> B["Express App (Cloud Run)"]
+  A["Client Browser (Angular 21 SPA)"] --> B["Express API + Static Host (Cloud Run)"]
   B --> C["Firestore"]
   B --> D["Gmail SMTP (App Password)"]
   E["Ops User (x-ops-key)"] --> B
@@ -57,23 +57,31 @@ Protected ops endpoints (`x-ops-key` required):
 
 ## Quick Start (Local)
 
-1. Install dependencies:
+1. Install backend dependencies:
    ```bash
    npm install
    ```
-2. Authenticate ADC for Firestore (optional but recommended):
+2. Install frontend dependencies:
+   ```bash
+   npm --prefix frontend install
+   ```
+3. Authenticate ADC for Firestore (optional but recommended):
    ```bash
    gcloud auth application-default login
    ```
-3. Copy environment template and fill values:
+4. Copy environment template and fill values:
    ```bash
    cp .env.example .env
    ```
-4. Run the app:
+5. Build Angular frontend:
+   ```bash
+   npm run frontend:build
+   ```
+6. Run the app:
    ```bash
    npm run dev
    ```
-5. Open:
+7. Open:
    `http://localhost:3000`
 
 ## Environment Variables
@@ -121,15 +129,16 @@ export MAIL_TO="your_gmail@gmail.com"
 
 ## Repository Structure
 
+- `frontend/`: Angular 21 application source
 - `index.js`: Express server and API routes
-- `public/`: frontend pages and assets
+- `public/`: legacy fallback assets and static media
 - `data/`: local fallback data store
 - `deploy/cloud-run.sh`: deployment helper
 - `Dockerfile`: container definition
 
 ## Portfolio Talking Points
 
-- End-to-end migration from legacy prototype to cloud-ready product
+- End-to-end migration from legacy static pages to Angular + cloud-ready architecture
 - Firestore-backed server logic with environment-aware fallback
 - Operational observability via protected summary endpoints
 - Real-world notification path integrated with Gmail SMTP

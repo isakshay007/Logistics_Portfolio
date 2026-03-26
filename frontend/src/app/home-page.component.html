@@ -1,0 +1,334 @@
+<div class="page-shell">
+  <header class="site-header">
+    <a class="brand" routerLink="/">
+      <span class="brand-mark">LAFL</span>
+      <span class="brand-copy">Peace. Delivered.</span>
+    </a>
+
+    <button
+      class="menu-toggle"
+      type="button"
+      [attr.aria-expanded]="navOpen"
+      aria-label="Toggle navigation"
+      (click)="toggleNav()"
+    >
+      <span></span>
+      <span></span>
+    </button>
+
+    <nav class="site-nav" [class.is-open]="navOpen">
+      <a href="#services" (click)="closeNav()">Services</a>
+      <a href="#network" (click)="closeNav()">Network</a>
+      <a href="#tracker" (click)="closeNav()">Track</a>
+      <a href="#quote" (click)="closeNav()">Get Quote</a>
+      <a href="#contact" (click)="closeNav()">Contact</a>
+      <a class="button button-small button-ghost" routerLink="/signup" (click)="closeNav()">
+        Client Portal
+      </a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="hero section">
+      <div class="hero-copy">
+        <p class="eyebrow">Global Freight Coordination</p>
+        <h1>Move cargo with a calmer, clearer operations experience.</h1>
+        <p class="lead">
+          LAFL combines freight execution, shipment visibility, and fast support into one logistics
+          workflow built for teams that cannot afford uncertainty.
+        </p>
+
+        <div class="hero-actions">
+          <a class="button" href="#quote">Request a Quote</a>
+          <a class="button button-ghost" href="#tracker">Track a Shipment</a>
+        </div>
+      </div>
+
+      <div class="hero-visual">
+        <div class="hero-card hero-card-primary">
+          <p class="card-label">Live Ops Snapshot</p>
+          <h2>LAFL-98241</h2>
+          <p>JFK International Cargo Center</p>
+          <div class="progress-shell" aria-hidden="true">
+            <span style="width: 54%"></span>
+          </div>
+          <div class="metric-row">
+            <span>Mode: Air Freight</span>
+            <span>Status: Customs Review</span>
+          </div>
+        </div>
+
+        <div class="hero-card hero-card-photo">
+          <img src="/images/heroimage.jpeg" alt="Cargo containers at a shipping terminal" />
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="services">
+      <div class="section-heading">
+        <p class="eyebrow">Services</p>
+        <h2>Built for shipments that need control, not just transportation.</h2>
+      </div>
+
+      <div class="feature-grid">
+        <article class="feature-card">
+          <img src="/images/serviceimage1.jpg" alt="Ocean freight operations" />
+          <div>
+            <h3>Ocean Freight</h3>
+            <p>FCL, LCL, route optimization, and milestone reporting for predictable sea moves.</p>
+          </div>
+        </article>
+        <article class="feature-card">
+          <img src="/images/serviceimage2.jpg" alt="Air freight loading workflow" />
+          <div>
+            <h3>Air Freight</h3>
+            <p>Time-sensitive air cargo coordination with customs-ready documentation support.</p>
+          </div>
+        </article>
+        <article class="feature-card">
+          <img src="/images/serviceimage3.jpg" alt="Inland trucking support" />
+          <div>
+            <h3>Inland Transportation</h3>
+            <p>Road coordination across handoff points to reduce idle time and missed delivery slots.</p>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="section" id="network">
+      <div class="section-heading">
+        <p class="eyebrow">Network Strength</p>
+        <h2>Operational discipline backed by accredited partners and sector expertise.</h2>
+      </div>
+      <div class="pillars">
+        <article class="pillar-card">
+          <h3>Trusted Accreditations</h3>
+          <p>IATA, FIATA, AEO, customs brokerage support, and regional trade-body alignment.</p>
+        </article>
+        <article class="pillar-card">
+          <h3>Industry Coverage</h3>
+          <p>Retail, pharma, industrial projects, exhibitions, and high-priority replenishment lanes.</p>
+        </article>
+        <article class="pillar-card">
+          <h3>Execution Rhythm</h3>
+          <p>Structured milestone communication, exception handling, and fewer surprises for client teams.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="section tracker-section" id="tracker">
+      <div class="section-heading">
+        <p class="eyebrow">Shipment Visibility</p>
+        <h2>Track a live demo shipment.</h2>
+        <p class="section-copy">
+          Use <strong>LAFL-98241</strong> to see active issues, or <strong>LAFL-24017</strong> for a healthy route.
+        </p>
+      </div>
+
+      <div class="tracker-shell">
+        <form class="panel form-panel" (ngSubmit)="trackShipment()">
+          <label for="reference">Shipment reference</label>
+          <div class="inline-field">
+            <input
+              id="reference"
+              name="reference"
+              type="text"
+              placeholder="LAFL-98241"
+              [(ngModel)]="trackingReference"
+              required
+            />
+            <button class="button" type="submit">Track</button>
+          </div>
+        </form>
+
+        <section class="panel tracker-result" aria-live="polite">
+          <p *ngIf="trackingLoading" class="placeholder-copy">Loading shipment details...</p>
+          <p *ngIf="trackingError" class="placeholder-copy">{{ trackingError }}</p>
+
+          <ng-container *ngIf="trackingShipment as shipment">
+            <div class="tracker-meta">
+              <p class="eyebrow">Current Shipment</p>
+              <h3>{{ shipment.reference }}</h3>
+              <p>{{ shipment.status }} at {{ shipment.currentLocation }}</p>
+              <div class="progress-shell" aria-hidden="true">
+                <span [style.width.%]="shipment.progress"></span>
+              </div>
+            </div>
+
+            <div class="tracker-grid">
+              <article>
+                <strong>Mode</strong>
+                <span>{{ shipment.mode }}</span>
+              </article>
+              <article>
+                <strong>ETA</strong>
+                <span>{{ shipment.eta }}</span>
+              </article>
+              <article>
+                <strong>Destination</strong>
+                <span>{{ shipment.destination }}</span>
+              </article>
+            </div>
+
+            <div class="tracker-meta">
+              <p class="eyebrow">Ops Summary</p>
+              <p>{{ shipment.summary }}</p>
+              <p><strong>Next action:</strong> {{ shipment.nextAction }}</p>
+              <p><strong>Support owner:</strong> {{ shipment.supportOwner }}</p>
+            </div>
+
+            <div class="issue-list" *ngIf="shipment.issues?.length; else noIssues">
+              <article
+                class="event-item issue-item"
+                *ngFor="let issue of shipment.issues"
+                [ngClass]="issueSeverityClass(issue.severity)"
+              >
+                <strong>{{ issue.severity }} issue: {{ issue.title }}</strong>
+                <span>{{ issue.detail }}</span>
+                <p><strong>Owner:</strong> {{ issue.owner }}</p>
+                <p><strong>Action:</strong> {{ issue.action }}</p>
+              </article>
+            </div>
+
+            <ng-template #noIssues>
+              <p class="placeholder-copy">No active issues on this shipment.</p>
+            </ng-template>
+
+            <div class="event-list">
+              <article class="event-item" *ngFor="let eventItem of shipment.events">
+                <strong>{{ eventItem.label }}</strong>
+                <span>{{ eventItem.location }}</span>
+                <p>{{ formatDate(eventItem.timestamp) }}</p>
+              </article>
+            </div>
+          </ng-container>
+
+          <p *ngIf="!trackingLoading && !trackingError && !trackingShipment" class="placeholder-copy">
+            Enter a shipment reference to view current location, ETA, and recent events.
+          </p>
+        </section>
+      </div>
+    </section>
+
+    <section class="section quote-section" id="quote">
+      <div class="section-heading">
+        <p class="eyebrow">Quote Request</p>
+        <h2>Tell us the move. We will shape the route.</h2>
+      </div>
+
+      <div class="two-column">
+        <form class="panel form-panel" (ngSubmit)="submitQuote()">
+          <div class="form-grid">
+            <label>
+              Company
+              <input name="company" type="text" [(ngModel)]="quoteForm.company" required />
+            </label>
+            <label>
+              Contact Name
+              <input name="contactName" type="text" [(ngModel)]="quoteForm.contactName" required />
+            </label>
+            <label>
+              Email
+              <input name="email" type="email" [(ngModel)]="quoteForm.email" required />
+            </label>
+            <label>
+              Service Type
+              <select name="serviceType" [(ngModel)]="quoteForm.serviceType" required>
+                <option value="">Choose one</option>
+                <option value="Ocean Freight">Ocean Freight</option>
+                <option value="Air Freight">Air Freight</option>
+                <option value="Road Freight">Road Freight</option>
+                <option value="Project Cargo">Project Cargo</option>
+              </select>
+            </label>
+            <label>
+              Origin
+              <input name="origin" type="text" [(ngModel)]="quoteForm.origin" required />
+            </label>
+            <label>
+              Destination
+              <input name="destination" type="text" [(ngModel)]="quoteForm.destination" required />
+            </label>
+            <label>
+              Shipment Type
+              <input name="shipmentType" type="text" [(ngModel)]="quoteForm.shipmentType" />
+            </label>
+            <label class="full-span">
+              Cargo Details
+              <textarea name="cargoDetails" rows="5" [(ngModel)]="quoteForm.cargoDetails"></textarea>
+            </label>
+          </div>
+          <button class="button" type="submit">Submit Quote Request</button>
+        </form>
+
+        <aside class="panel callout-panel">
+          <p class="eyebrow">Why teams choose LAFL</p>
+          <h3>Fewer blind spots between booking and delivery.</h3>
+          <ul class="check-list">
+            <li>Clear handoffs across warehouses, carriers, and last-mile teams</li>
+            <li>Faster response on routing changes and documentation blockers</li>
+            <li>One portal for inbound leads, client onboarding, and shipment lookups</li>
+          </ul>
+        </aside>
+      </div>
+    </section>
+
+    <section class="section contact-section" id="contact">
+      <div class="section-heading">
+        <p class="eyebrow">Contact</p>
+        <h2>Need an operations partner that communicates early?</h2>
+      </div>
+
+      <div class="two-column">
+        <div class="panel location-panel">
+          <p class="card-label">Coverage Highlights</p>
+          <h3>India to global trade lanes with U.S. and EU coordination support.</h3>
+          <p>
+            Use the form to request callbacks, discuss a new lane, or ask about handling requirements for a specific market.
+          </p>
+        </div>
+
+        <form class="panel form-panel" (ngSubmit)="submitContact()">
+          <div class="form-grid">
+            <label>
+              Name
+              <input name="name" type="text" [(ngModel)]="contactForm.name" required />
+            </label>
+            <label>
+              Email
+              <input name="email" type="email" [(ngModel)]="contactForm.email" required />
+            </label>
+            <label class="full-span">
+              Company
+              <input name="company" type="text" [(ngModel)]="contactForm.company" />
+            </label>
+            <label class="full-span">
+              Message
+              <textarea name="message" rows="5" [(ngModel)]="contactForm.message" required></textarea>
+            </label>
+          </div>
+          <button class="button" type="submit">Send Message</button>
+        </form>
+      </div>
+    </section>
+
+    <section class="section cta-strip">
+      <div class="cta-card">
+        <div>
+          <p class="eyebrow">Client Access</p>
+          <h2>Launch your portal account and keep your freight team aligned.</h2>
+        </div>
+        <a class="button button-contrast" routerLink="/signup">Create Portal Access</a>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <p>LAFL Logistics Portal</p>
+    <p>Freight visibility, quote intake, and client onboarding in one streamlined experience.</p>
+  </footer>
+</div>
+
+<div class="toast" [class.is-visible]="notice" [class.is-error]="notice?.type === 'error'" aria-live="polite">
+  {{ notice?.text }}
+</div>

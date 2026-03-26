@@ -1,0 +1,70 @@
+<main class="auth-shell">
+  <section class="auth-panel auth-panel-highlight">
+    <a class="brand" routerLink="/">
+      <span class="brand-mark">LAFL</span>
+      <span class="brand-copy">Peace. Delivered.</span>
+    </a>
+    <p class="eyebrow">Client Portal</p>
+    <h1>Bring your logistics team into one shared control room.</h1>
+    <p>
+      Create access for quote requests, shipment visibility, and faster issue resolution with the
+      upgraded Angular experience.
+    </p>
+    <ul class="check-list">
+      <li>Centralized shipment status lookups</li>
+      <li>Faster handoff between sales and operations</li>
+      <li>Cleaner client intake workflow</li>
+    </ul>
+  </section>
+
+  <section class="auth-panel">
+    <p class="eyebrow">Create Account</p>
+    <h2>Start with your team details.</h2>
+    <form class="form-panel auth-form" (ngSubmit)="submitSignup()">
+      <div class="form-grid">
+        <label>
+          Full Name
+          <input name="name" type="text" [(ngModel)]="signupForm.name" required />
+        </label>
+        <label>
+          Work Email
+          <input name="email" type="email" [(ngModel)]="signupForm.email" required />
+        </label>
+        <label>
+          Company
+          <input name="company" type="text" [(ngModel)]="signupForm.company" required />
+        </label>
+        <label>
+          Phone
+          <input name="phone" type="tel" [(ngModel)]="signupForm.phone" />
+        </label>
+        <label class="full-span">
+          Primary Interest
+          <select name="interest" [(ngModel)]="signupForm.interest">
+            <option value="">Choose one</option>
+            <option value="Shipment Visibility">Shipment Visibility</option>
+            <option value="Quote Coordination">Quote Coordination</option>
+            <option value="Dedicated Account Support">Dedicated Account Support</option>
+          </select>
+        </label>
+        <label class="full-span">
+          Password
+          <input
+            name="password"
+            type="password"
+            minlength="8"
+            [(ngModel)]="signupForm.password"
+            required
+          />
+        </label>
+      </div>
+      <button class="button" type="submit" [disabled]="isSubmitting">
+        {{ isSubmitting ? 'Creating...' : 'Create Portal Access' }}
+      </button>
+    </form>
+  </section>
+</main>
+
+<div class="toast" [class.is-visible]="notice" [class.is-error]="notice?.type === 'error'" aria-live="polite">
+  {{ notice?.text }}
+</div>

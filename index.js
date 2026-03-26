@@ -1,5 +1,6 @@
 const express = require("express");
 const crypto = require("crypto");
+const fsSync = require("fs");
 const fs = require("fs/promises");
 const path = require("path");
 
@@ -21,6 +22,17 @@ try {
 const app = express();
 const PORT = process.env.PORT || 3000;
 const publicDirectory = path.join(__dirname, "public");
+const angularDistDirectory = path.join(
+  __dirname,
+  "frontend",
+  "dist",
+  "frontend",
+  "browser"
+);
+const hasAngularBuild = fsSync.existsSync(
+  path.join(angularDistDirectory, "index.html")
+);
+const staticDirectory = hasAngularBuild ? angularDistDirectory : publicDirectory;
 const dataDirectory = path.join(__dirname, "data");
 const appBaseUrl = process.env.APP_BASE_URL || `http://localhost:${PORT}`;
 const gcpProjectId =
@@ -158,10 +170,17 @@ const defaultData = {
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
-app.use(express.static(publicDirectory));
+app.use(express.static(staticDirectory));
+app.use("/images", express.static(path.join(publicDirectory, "images")));
 
-function pageResponse(fileName) {
-  return (req, res) => res.sendFile(path.join(publicDirectory, fileName));
+function pageResponse(fallbackFileName) {
+  return (req, res) => {
+    if (hasAngularBuild) {
+      return res.sendFile(path.join(angularDistDirectory, "index.html"));
+    }
+
+    return res.sendFile(path.join(publicDirectory, fallbackFileName));
+  };
 }
 
 function normalizeText(value) {
@@ -501,8 +520,10 @@ async function seedFirestoreCollection(collection, records) {
 
 app.get("/", pageResponse("index.html"));
 app.get("/signup", pageResponse("signup.html"));
+app.get("/signup-success", pageResponse("signup_success.html"));
 app.get("/login_page", (req, res) => res.redirect("/signup"));
 app.get("/signin.html", (req, res) => res.redirect("/signup"));
+app.get("/signup_success.html", (req, res) => res.redirect("/signup-success"));
 app.get("/api/health", (req, res) => {
   res.json({
     ok: true,
@@ -804,12 +825,22 @@ app.post("/api/signup", async (req, res, next) => {
 
     return res.status(201).json({
       message: "Portal access created. Your onboarding checklist is ready.",
-      redirectTo: "/signup_success.html",
+      redirectTo: "/signup-success",
     });
   } catch (error) {
     return next(error);
   }
 });
+
+if (hasAngularBuild) {
+  app.get("*", (req, res, next) => {
+    if (req.path.startsWith("/api/")) {
+      return next();
+    }
+
+    return res.sendFile(path.join(angularDistDirectory, "index.html"));
+  });
+}
 
 app.use((error, req, res, next) => {
   console.error(error);
