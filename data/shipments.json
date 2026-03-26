@@ -1,0 +1,106 @@
+[
+  {
+    "reference": "LAFL-24017",
+    "client": "Northline Retail",
+    "mode": "Ocean + Road",
+    "status": "On Schedule",
+    "progress": 72,
+    "eta": "2026-03-29",
+    "currentLocation": "Rotterdam Distribution Hub",
+    "destination": "Hamburg, Germany",
+    "lastUpdated": "2026-03-26T09:20:00.000Z",
+    "events": [
+      {
+        "label": "Container cleared customs",
+        "location": "Rotterdam Port",
+        "timestamp": "2026-03-25T13:15:00.000Z"
+      },
+      {
+        "label": "Truck transfer assigned",
+        "location": "Rotterdam Distribution Hub",
+        "timestamp": "2026-03-26T09:20:00.000Z"
+      }
+    ],
+    "issues": [],
+    "summary": "Cargo is moving on plan with no open operational exceptions.",
+    "nextAction": "Final truck dispatch to Hamburg on arrival slot confirmation.",
+    "supportOwner": "Ava Patel"
+  },
+  {
+    "reference": "LAFL-98241",
+    "client": "AeroPharm Labs",
+    "mode": "Air Freight",
+    "status": "Customs Review",
+    "progress": 54,
+    "eta": "2026-03-30",
+    "currentLocation": "JFK International Cargo Center",
+    "destination": "Toronto, Canada",
+    "lastUpdated": "2026-03-26T06:40:00.000Z",
+    "events": [
+      {
+        "label": "Flight landed",
+        "location": "JFK International Cargo Center",
+        "timestamp": "2026-03-26T02:05:00.000Z"
+      },
+      {
+        "label": "Documentation submitted",
+        "location": "JFK International Cargo Center",
+        "timestamp": "2026-03-26T06:40:00.000Z"
+      }
+    ],
+    "issues": [
+      {
+        "severity": "High",
+        "title": "Customs hold on active ingredient certificate",
+        "detail": "Border review flagged a mismatch between the uploaded certificate and the carton batch number.",
+        "owner": "JFK Customs Desk",
+        "action": "Upload corrected certificate before 3:00 PM ET to avoid a 24-hour delay."
+      },
+      {
+        "severity": "Medium",
+        "title": "Temperature logger check required",
+        "detail": "Cold-chain audit requested one manual validation before final release from the cargo center.",
+        "owner": "Station Handling Team",
+        "action": "Confirm logger reading and re-seal container after inspection."
+      }
+    ],
+    "summary": "Shipment arrived, but release is blocked until customs documentation and cold-chain validation are cleared.",
+    "nextAction": "Use this sample ID to review issue handling in the tracker UI and ops endpoint.",
+    "supportOwner": "Jordan Lee"
+  },
+  {
+    "reference": "LAFL-77802",
+    "client": "Everstone Interiors",
+    "mode": "Project Cargo",
+    "status": "Booked",
+    "progress": 18,
+    "eta": "2026-04-04",
+    "currentLocation": "Chennai Consolidation Center",
+    "destination": "Dubai, UAE",
+    "lastUpdated": "2026-03-25T17:10:00.000Z",
+    "events": [
+      {
+        "label": "Cargo inspection complete",
+        "location": "Chennai Consolidation Center",
+        "timestamp": "2026-03-25T11:30:00.000Z"
+      },
+      {
+        "label": "Export booking confirmed",
+        "location": "Chennai Consolidation Center",
+        "timestamp": "2026-03-25T17:10:00.000Z"
+      }
+    ],
+    "issues": [
+      {
+        "severity": "Low",
+        "title": "Crating dimensions pending final approval",
+        "detail": "Final crate measurements are awaiting shipper sign-off before pickup scheduling can be locked.",
+        "owner": "Project Cargo Planning",
+        "action": "Approve crate plan to release pickup slot confirmation."
+      }
+    ],
+    "summary": "Project cargo booking is confirmed and waiting on final crate approval before dispatch scheduling.",
+    "nextAction": "Collect final packaging approval from the origin team.",
+    "supportOwner": "Mina Joseph"
+  }
+]
