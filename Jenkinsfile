@@ -7,6 +7,7 @@ pipeline {
   }
 
   environment {
+    PATH = "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
     CI = 'true'
     PORT = '4310'
     APP_BASE_URL = 'http://127.0.0.1:4310'
@@ -22,6 +23,14 @@ pipeline {
   }
 
   stages {
+    stage('Verify Node Toolchain') {
+      steps {
+        sh 'echo "PATH=$PATH"'
+        sh 'node -v'
+        sh 'npm -v'
+      }
+    }
+
     stage('Install Dependencies') {
       steps {
         sh 'npm ci'
