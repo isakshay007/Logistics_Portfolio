@@ -120,6 +120,22 @@ export MAIL_TO="your_gmail@gmail.com"
 ./deploy/cloud-run.sh
 ```
 
+## Jenkins CI
+
+This repository now includes a root `Jenkinsfile` tailored to the current stack (Express backend + Angular frontend).
+
+Pipeline stages:
+
+- install backend and frontend dependencies with `npm ci`
+- run Angular unit tests (`npm --prefix frontend run test -- --watch=false`)
+- build Angular production bundle (`npm run build`)
+- smoke test backend health endpoint (`GET /api/health`)
+
+Notes:
+
+- The frontend production config disables font inlining (`fonts: false`) to avoid CI failures when external font hosts are unreachable.
+- Build artifacts and smoke logs are archived: `frontend/dist/**`, `health.json`, and `backend-smoke.log`.
+
 ## Security Notes
 
 - Do not commit `.env` or real credentials.

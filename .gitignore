@@ -6,3 +6,7 @@ node_modules
 .env.local
 .env.*.local
 !.env.example
+
+# CI smoke artifacts
+health.json
+backend-smoke.log
