@@ -53,17 +53,26 @@ jobs:
       - name: Deploy Services In Startup Order
         id: deploy-services
         env:
-          SPRING_DATASOURCE_PASSWORD: ${{ secrets.DB_PASS }}
+          DB_URL: ${{ secrets.DB_URL }}
+          DB_USER: ${{ secrets.DB_USER }}
+          DB_PASS: ${{ secrets.DB_PASS }}
           KAFKA_BOOTSTRAP_SERVERS: ${{ secrets.KAFKA_BROKERS }}
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
         run: |
           set -euo pipefail
           cd lafl-platform
 
+          set_db_env() {
+            local module="$1"
+            cf set-env "$module" SPRING_DATASOURCE_URL "$DB_URL"
+            cf set-env "$module" SPRING_DATASOURCE_USERNAME "$DB_USER"
+            cf set-env "$module" SPRING_DATASOURCE_PASSWORD "$DB_PASS"
+          }
+
           deploy_module() {
             local module="$1"
+            set_db_env "$module"
             cf push "$module" -f "$module/manifest.yml" \
-              --var SPRING_DATASOURCE_PASSWORD="$SPRING_DATASOURCE_PASSWORD" \
               --var KAFKA_BOOTSTRAP_SERVERS="$KAFKA_BOOTSTRAP_SERVERS" \
               --var JWT_SECRET="$JWT_SECRET"
           }
