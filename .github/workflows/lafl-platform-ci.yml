@@ -86,7 +86,7 @@ jobs:
             fi
 
             run_rpk() {
-              docker run --rm "$rpk_image" rpk "$@" "${rpk_flags[@]}"
+              docker run --rm "$rpk_image" "${rpk_flags[@]}" "$@"
             }
 
             echo "Bootstrapping Kafka topics..."
