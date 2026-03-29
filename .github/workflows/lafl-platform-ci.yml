@@ -55,6 +55,10 @@ jobs:
         run: |
           set -euo pipefail
 
+          route_of() {
+            cf app "$1" | sed -n 's/^routes:[[:space:]]*//p' | tr -d '\r' | awk '{print $1}'
+          }
+
           # config-server
           cf push config-server -f lafl-platform/config-server/manifest.yml --no-start
           cf set-env config-server SPRING_DATASOURCE_URL "${{ secrets.DB_URL }}"
@@ -73,49 +77,95 @@ jobs:
           fi
           eureka_url="https://${eureka_route}/eureka/"
 
-          # gateway
-          cf push gateway -f lafl-platform/gateway/manifest.yml --no-start
-          cf set-env gateway JWT_SECRET "${{ secrets.JWT_SECRET }}"
-          cf set-env gateway EUREKA_CLIENT_SERVICEURL_DEFAULTZONE "$eureka_url"
-          cf start gateway || { cf logs gateway --recent; exit 1; }
-
           # shipment-service
           cf push shipment-service -f lafl-platform/shipment-service/manifest.yml --no-start
+          cf unset-env shipment-service EUREKA_INSTANCE_HOSTNAME || true
+          cf unset-env shipment-service EUREKA_INSTANCE_SECURE_PORT_ENABLED || true
+          cf unset-env shipment-service EUREKA_INSTANCE_SECURE_PORT || true
+          cf unset-env shipment-service EUREKA_INSTANCE_NON_SECURE_PORT_ENABLED || true
           cf set-env shipment-service SPRING_DATASOURCE_URL "${{ secrets.DB_URL }}"
           cf set-env shipment-service SPRING_DATASOURCE_USERNAME "${{ secrets.DB_USER }}"
           cf set-env shipment-service SPRING_DATASOURCE_PASSWORD "${{ secrets.DB_PASS }}"
           cf set-env shipment-service JWT_SECRET "${{ secrets.JWT_SECRET }}"
           cf set-env shipment-service KAFKA_BOOTSTRAP_SERVERS "${{ secrets.KAFKA_BROKERS }}"
           cf set-env shipment-service EUREKA_CLIENT_SERVICEURL_DEFAULTZONE "$eureka_url"
+          cf set-env shipment-service EUREKA_INSTANCE_PREFER_IP_ADDRESS false
           cf start shipment-service || { cf logs shipment-service --recent; exit 1; }
+          shipment_route="$(route_of shipment-service)"
+          if [ -z "$shipment_route" ]; then
+            echo "Unable to resolve shipment-service route from cf app output."
+            exit 1
+          fi
 
           # user-service
           cf push user-service -f lafl-platform/user-service/manifest.yml --no-start
+          cf unset-env user-service EUREKA_INSTANCE_HOSTNAME || true
+          cf unset-env user-service EUREKA_INSTANCE_SECURE_PORT_ENABLED || true
+          cf unset-env user-service EUREKA_INSTANCE_SECURE_PORT || true
+          cf unset-env user-service EUREKA_INSTANCE_NON_SECURE_PORT_ENABLED || true
           cf set-env user-service SPRING_DATASOURCE_URL "${{ secrets.DB_URL }}"
           cf set-env user-service SPRING_DATASOURCE_USERNAME "${{ secrets.DB_USER }}"
           cf set-env user-service SPRING_DATASOURCE_PASSWORD "${{ secrets.DB_PASS }}"
           cf set-env user-service JWT_SECRET "${{ secrets.JWT_SECRET }}"
           cf set-env user-service KAFKA_BOOTSTRAP_SERVERS "${{ secrets.KAFKA_BROKERS }}"
           cf set-env user-service EUREKA_CLIENT_SERVICEURL_DEFAULTZONE "$eureka_url"
+          cf set-env user-service EUREKA_INSTANCE_PREFER_IP_ADDRESS false
           cf start user-service || { cf logs user-service --recent; exit 1; }
+          user_route="$(route_of user-service)"
+          if [ -z "$user_route" ]; then
+            echo "Unable to resolve user-service route from cf app output."
+            exit 1
+          fi
 
           # quote-service
           cf push quote-service -f lafl-platform/quote-service/manifest.yml --no-start
+          cf unset-env quote-service EUREKA_INSTANCE_HOSTNAME || true
+          cf unset-env quote-service EUREKA_INSTANCE_SECURE_PORT_ENABLED || true
+          cf unset-env quote-service EUREKA_INSTANCE_SECURE_PORT || true
+          cf unset-env quote-service EUREKA_INSTANCE_NON_SECURE_PORT_ENABLED || true
           cf set-env quote-service SPRING_DATASOURCE_URL "${{ secrets.DB_URL }}"
           cf set-env quote-service SPRING_DATASOURCE_USERNAME "${{ secrets.DB_USER }}"
           cf set-env quote-service SPRING_DATASOURCE_PASSWORD "${{ secrets.DB_PASS }}"
           cf set-env quote-service JWT_SECRET "${{ secrets.JWT_SECRET }}"
           cf set-env quote-service KAFKA_BOOTSTRAP_SERVERS "${{ secrets.KAFKA_BROKERS }}"
           cf set-env quote-service EUREKA_CLIENT_SERVICEURL_DEFAULTZONE "$eureka_url"
+          cf set-env quote-service EUREKA_INSTANCE_PREFER_IP_ADDRESS false
           cf start quote-service || { cf logs quote-service --recent; exit 1; }
+          quote_route="$(route_of quote-service)"
+          if [ -z "$quote_route" ]; then
+            echo "Unable to resolve quote-service route from cf app output."
+            exit 1
+          fi
 
           # notification-service
           cf push notification-service -f lafl-platform/notification-service/manifest.yml --no-start
+          cf unset-env notification-service EUREKA_INSTANCE_HOSTNAME || true
+          cf unset-env notification-service EUREKA_INSTANCE_SECURE_PORT_ENABLED || true
+          cf unset-env notification-service EUREKA_INSTANCE_SECURE_PORT || true
+          cf unset-env notification-service EUREKA_INSTANCE_NON_SECURE_PORT_ENABLED || true
           cf set-env notification-service KAFKA_BOOTSTRAP_SERVERS "${{ secrets.KAFKA_BROKERS }}"
           cf set-env notification-service EUREKA_CLIENT_SERVICEURL_DEFAULTZONE "$eureka_url"
+          cf set-env notification-service EUREKA_INSTANCE_PREFER_IP_ADDRESS false
           cf start notification-service || { cf logs notification-service --recent; exit 1; }
+          notification_route="$(route_of notification-service)"
+          if [ -z "$notification_route" ]; then
+            echo "Unable to resolve notification-service route from cf app output."
+            exit 1
+          fi
 
-          gateway_route="$(cf app gateway | sed -n 's/^routes:[[:space:]]*//p' | tr -d '\r' | awk '{print $1}')"
+          # gateway (must be last so backend routes can be wired explicitly)
+          cf push gateway -f lafl-platform/gateway/manifest.yml --no-start
+          cf unset-env gateway SPRING_CLOUD_GATEWAY_ROUTES_0_URI || true
+          cf unset-env gateway SPRING_CLOUD_GATEWAY_ROUTES_1_URI || true
+          cf set-env gateway JWT_SECRET "${{ secrets.JWT_SECRET }}"
+          cf set-env gateway EUREKA_CLIENT_SERVICEURL_DEFAULTZONE "$eureka_url"
+          cf set-env gateway SHIPMENT_SERVICE_URI "https://${shipment_route}"
+          cf set-env gateway USER_SERVICE_URI "https://${user_route}"
+          cf set-env gateway QUOTE_SERVICE_URI "https://${quote_route}"
+          cf set-env gateway NOTIFICATION_SERVICE_URI "https://${notification_route}"
+          cf start gateway || { cf logs gateway --recent; exit 1; }
+
+          gateway_route="$(route_of gateway)"
           if [ -z "$gateway_route" ]; then
             echo "Unable to resolve gateway route from cf app output."
             exit 1

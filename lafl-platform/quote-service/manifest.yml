@@ -3,7 +3,7 @@ applications:
     path: build/libs/quote-service-0.1.0-SNAPSHOT.jar
     memory: 512M
     instances: 1
-    no-route: true
+    random-route: true
     buildpacks:
       - java_buildpack
     env:
