@@ -11,7 +11,8 @@ Production-grade microservices logistics platform built with Spring Boot, Spring
 ## Live Demo
 
 - Gateway URL: `https://gateway-turbulent-wolf-ap.cfapps.us10-001.hana.ondemand.com`
-- Frontend URL: deployed as `lafl-frontend` with a random route (get current route using `cf app lafl-frontend | grep routes`)
+- Frontend URL: `https://lafl-frontend-daring-civet-ri.cfapps.us10-001.hana.ondemand.com`
+- Latest verified deploy: GitHub Actions run `23718881802` on March 29, 2026
 
 Example curls (5 core endpoints):
 
@@ -263,6 +264,7 @@ Environment routing:
 Cloud Foundry deployment:
 - Staticfile buildpack via `frontend/manifest.yml`
 - Build output path: `dist/frontend/browser`
+- Live app route (current): `lafl-frontend-daring-civet-ri.cfapps.us10-001.hana.ondemand.com`
 
 ## CI/CD Pipeline
 
