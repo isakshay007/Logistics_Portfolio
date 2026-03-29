@@ -8,7 +8,9 @@ applications:
       - java_buildpack
     env:
       CF_APP_NAME: config-server
-      SPRING_PROFILES_ACTIVE: cloud
+      SPRING_PROFILES_ACTIVE: native,cloud
+      SPRING_CLOUD_CONFIG_SERVER_NATIVE_SEARCH_LOCATIONS: classpath:/config
+      SPRING_CLOUD_CONFIG_SERVER_GIT_URI: ""
       SPRING_DATASOURCE_URL: jdbc:postgresql://db.epvdfxwkqdaaeornsotb.supabase.co:5432/postgres
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: ((SPRING_DATASOURCE_PASSWORD))
