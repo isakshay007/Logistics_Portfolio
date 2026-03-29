@@ -17,6 +17,44 @@ Production-style Spring Cloud microservices platform for LAFL logistics workflow
 - Production/Cloud: Supabase PostgreSQL via `DB_URL` secret (recommended: Supabase pooler URL)
 - Local development: `docker compose` PostgreSQL service
 
+## Production Integrations
+
+### Kafka (Redpanda, SASL_SSL)
+
+Services using Kafka:
+
+- `shipment-service`
+- `user-service`
+- `quote-service`
+- `notification-service`
+
+Each service reads:
+
+- `KAFKA_BROKERS`
+- `KAFKA_SECURITY_PROTOCOL` (recommended `SASL_SSL`)
+- `KAFKA_SASL_MECHANISM` (recommended `PLAIN`)
+- `KAFKA_SASL_JAAS` (constructed in CI/CD from username/password secrets)
+
+### Redis (Upstash TLS)
+
+`shipment-service` Redis settings:
+
+- `REDIS_HOST`
+- `REDIS_PORT`
+- `REDIS_PASSWORD`
+- `REDIS_SSL_ENABLED` (set to `true` in CI/CD for Upstash TLS)
+
+### SMTP (Gmail)
+
+`notification-service` SMTP settings:
+
+- `SMTP_HOST` (for Gmail: `smtp.gmail.com`)
+- `SMTP_PORT` (for Gmail: `587`)
+- `SMTP_USER` (full Gmail address)
+- `SMTP_PASS` (Google App Password)
+- `MAIL_FROM`
+- `MAIL_TO`
+
 ## Implemented Platform Features
 
 ### Auth + RBAC at Gateway
@@ -116,6 +154,32 @@ Jobs:
 1. `build-and-test` (Gradle test across modules)
 2. `deploy` (Cloud Foundry push in startup order)
 3. `smoke-test` (gateway health + tracking endpoint + signup endpoint)
+
+Required GitHub Secrets for deploy:
+
+- `CF_API`
+- `CF_USERNAME`
+- `CF_PASSWORD`
+- `CF_ORG`
+- `CF_SPACE`
+- `DB_URL`
+- `DB_USER`
+- `DB_PASS`
+- `JWT_SECRET`
+- `KAFKA_BROKERS`
+- `KAFKA_SECURITY_PROTOCOL`
+- `KAFKA_SASL_MECHANISM`
+- `KAFKA_USERNAME`
+- `KAFKA_PASSWORD`
+- `REDIS_HOST`
+- `REDIS_PORT`
+- `REDIS_PASSWORD`
+- `SMTP_HOST`
+- `SMTP_PORT`
+- `SMTP_USER`
+- `SMTP_PASS`
+- `MAIL_FROM`
+- `MAIL_TO`
 
 ## Testing
 

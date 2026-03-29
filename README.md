@@ -194,8 +194,23 @@ Required GitHub Secrets:
 - `CF_ORG`
 - `CF_SPACE`
 - `JWT_SECRET`
+- `DB_URL`
+- `DB_USER`
 - `DB_PASS`
 - `KAFKA_BROKERS`
+- `KAFKA_SECURITY_PROTOCOL`
+- `KAFKA_SASL_MECHANISM`
+- `KAFKA_USERNAME`
+- `KAFKA_PASSWORD`
+- `REDIS_HOST`
+- `REDIS_PORT`
+- `REDIS_PASSWORD`
+- `SMTP_HOST`
+- `SMTP_PORT`
+- `SMTP_USER`
+- `SMTP_PASS`
+- `MAIL_FROM`
+- `MAIL_TO`
 
 ## Cloud Foundry Deployment
 
@@ -205,11 +220,11 @@ Startup order:
 
 1. `config-server`
 2. `eureka-server`
-3. `gateway`
-4. `shipment-service`
-5. `user-service`
-6. `quote-service`
-7. `notification-service`
+3. `shipment-service`
+4. `user-service`
+5. `quote-service`
+6. `notification-service`
+7. `gateway`
 
 ## Repository Layout
 

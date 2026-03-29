@@ -24,10 +24,17 @@ spring:
     create-schemas: false
   data:
     redis:
-      host: ${SPRING_DATA_REDIS_HOST:${REDIS_HOST:${redis.host:localhost}}}
-      port: ${SPRING_DATA_REDIS_PORT:${REDIS_PORT:${redis.port:6379}}}
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      ssl:
+        enabled: ${REDIS_SSL_ENABLED:false}
   kafka:
-    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:${KAFKA_BOOTSTRAP_SERVERS:${kafka.bootstrap-servers:localhost:9092}}}
+    bootstrap-servers: ${KAFKA_BROKERS:localhost:9092}
+    properties:
+      security.protocol: ${KAFKA_SECURITY_PROTOCOL:PLAINTEXT}
+      sasl.mechanism: ${KAFKA_SASL_MECHANISM:PLAIN}
+      sasl.jaas.config: ${KAFKA_SASL_JAAS:}
     producer:
       properties:
         max.block.ms: ${KAFKA_MAX_BLOCK_MS:5000}

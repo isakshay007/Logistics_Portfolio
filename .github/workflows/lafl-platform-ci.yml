@@ -59,24 +59,61 @@ jobs:
             cf app "$1" | sed -n 's/^routes:[[:space:]]*//p' | tr -d '\r' | awk '{print $1}'
           }
 
+          validation_errors=()
           kafka_brokers="${{ secrets.KAFKA_BROKERS }}"
-          if [ -z "$kafka_brokers" ] || [[ "$kafka_brokers" == localhost* ]]; then
-            echo "KAFKA_BROKERS secret is missing or points to localhost. Refusing deployment."
-            exit 1
-          fi
+          kafka_security_protocol="${{ secrets.KAFKA_SECURITY_PROTOCOL }}"
+          kafka_sasl_mechanism="${{ secrets.KAFKA_SASL_MECHANISM }}"
+          kafka_username="${{ secrets.KAFKA_USERNAME }}"
+          kafka_password="${{ secrets.KAFKA_PASSWORD }}"
           redis_host="${{ secrets.REDIS_HOST }}"
           redis_port="${{ secrets.REDIS_PORT }}"
-          mail_host="${{ secrets.MAIL_HOST }}"
-          mail_port="${{ secrets.MAIL_PORT }}"
-          mail_username="${{ secrets.MAIL_USERNAME }}"
-          mail_password="${{ secrets.MAIL_PASSWORD }}"
-          mail_smtp_auth="${{ secrets.MAIL_SMTP_AUTH }}"
-          mail_smtp_starttls="${{ secrets.MAIL_SMTP_STARTTLS }}"
+          redis_password="${{ secrets.REDIS_PASSWORD }}"
+          smtp_host="${{ secrets.SMTP_HOST }}"
+          smtp_port="${{ secrets.SMTP_PORT }}"
+          smtp_user="${{ secrets.SMTP_USER }}"
+          smtp_pass="${{ secrets.SMTP_PASS }}"
           mail_from="${{ secrets.MAIL_FROM }}"
           mail_to="${{ secrets.MAIL_TO }}"
-          if [ -z "$mail_host" ] || [ -z "$mail_port" ] || [ -z "$mail_from" ] || [ -z "$mail_to" ]; then
-            echo "MAIL_HOST, MAIL_PORT, MAIL_FROM, and MAIL_TO secrets are required for notification email delivery."
+
+          if [ -z "$kafka_security_protocol" ]; then
+            kafka_security_protocol="SASL_SSL"
+          fi
+          if [ -z "$kafka_sasl_mechanism" ]; then
+            kafka_sasl_mechanism="PLAIN"
+          fi
+
+          if [ -z "$kafka_brokers" ]; then
+            validation_errors+=("KAFKA_BROKERS is missing.")
+          elif [[ "$kafka_brokers" == localhost* ]] || [[ "$kafka_brokers" == 127.* ]]; then
+            validation_errors+=("KAFKA_BROKERS points to localhost/loopback and is not reachable from Cloud Foundry.")
+          fi
+          if [[ "$kafka_security_protocol" == SASL_* ]]; then
+            if [ -z "$kafka_username" ] || [ -z "$kafka_password" ]; then
+              validation_errors+=("KAFKA_USERNAME and KAFKA_PASSWORD are required when KAFKA_SECURITY_PROTOCOL uses SASL.")
+            fi
+          fi
+          if [ -z "$redis_host" ] || [ -z "$redis_port" ] || [ -z "$redis_password" ]; then
+            validation_errors+=("REDIS_HOST, REDIS_PORT, and REDIS_PASSWORD are required for shipment-service Upstash TLS.")
+          fi
+          if [ -z "$smtp_host" ] || [ -z "$smtp_port" ] || [ -z "$smtp_user" ] || [ -z "$smtp_pass" ] || [ -z "$mail_from" ] || [ -z "$mail_to" ]; then
+            validation_errors+=("SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, MAIL_FROM, and MAIL_TO are required for notification-service.")
+          fi
+
+          if [ "${#validation_errors[@]}" -gt 0 ]; then
+            echo "Deployment preflight validation failed:"
+            for err in "${validation_errors[@]}"; do
+              echo "- $err"
+            done
             exit 1
+          fi
+
+          kafka_sasl_jaas=""
+          if [ -n "$kafka_username" ] && [ -n "$kafka_password" ]; then
+            escaped_kafka_username="${kafka_username//\\/\\\\}"
+            escaped_kafka_username="${escaped_kafka_username//\"/\\\"}"
+            escaped_kafka_password="${kafka_password//\\/\\\\}"
+            escaped_kafka_password="${escaped_kafka_password//\"/\\\"}"
+            kafka_sasl_jaas="org.apache.kafka.common.security.plain.PlainLoginModule required username=\"${escaped_kafka_username}\" password=\"${escaped_kafka_password}\";"
           fi
 
           # config-server
@@ -115,15 +152,15 @@ jobs:
           cf set-env shipment-service SPRING_DATASOURCE_PASSWORD "${{ secrets.DB_PASS }}"
           cf set-env shipment-service JWT_SECRET "${{ secrets.JWT_SECRET }}"
           cf set-env shipment-service SPRING_CLOUD_CONFIG_ENABLED false
-          cf set-env shipment-service SPRING_KAFKA_BOOTSTRAP_SERVERS "$kafka_brokers"
-          cf set-env shipment-service KAFKA_BOOTSTRAP_SERVERS "$kafka_brokers"
+          cf set-env shipment-service KAFKA_BROKERS "$kafka_brokers"
+          cf set-env shipment-service KAFKA_SECURITY_PROTOCOL "$kafka_security_protocol"
+          cf set-env shipment-service KAFKA_SASL_MECHANISM "$kafka_sasl_mechanism"
+          cf set-env shipment-service KAFKA_SASL_JAAS "$kafka_sasl_jaas"
           cf set-env shipment-service SPRING_CACHE_TYPE simple
-          if [ -n "$redis_host" ]; then
-            cf set-env shipment-service SPRING_DATA_REDIS_HOST "$redis_host"
-          fi
-          if [ -n "$redis_port" ]; then
-            cf set-env shipment-service SPRING_DATA_REDIS_PORT "$redis_port"
-          fi
+          cf set-env shipment-service REDIS_HOST "$redis_host"
+          cf set-env shipment-service REDIS_PORT "$redis_port"
+          cf set-env shipment-service REDIS_PASSWORD "$redis_password"
+          cf set-env shipment-service REDIS_SSL_ENABLED true
           cf set-env shipment-service EUREKA_CLIENT_SERVICEURL_DEFAULTZONE "$eureka_url"
           cf set-env shipment-service EUREKA_INSTANCE_PREFER_IP_ADDRESS false
           cf start shipment-service || { cf logs shipment-service --recent; exit 1; }
@@ -144,8 +181,10 @@ jobs:
           cf set-env user-service SPRING_DATASOURCE_PASSWORD "${{ secrets.DB_PASS }}"
           cf set-env user-service JWT_SECRET "${{ secrets.JWT_SECRET }}"
           cf set-env user-service SPRING_CLOUD_CONFIG_ENABLED false
-          cf set-env user-service SPRING_KAFKA_BOOTSTRAP_SERVERS "$kafka_brokers"
-          cf set-env user-service KAFKA_BOOTSTRAP_SERVERS "$kafka_brokers"
+          cf set-env user-service KAFKA_BROKERS "$kafka_brokers"
+          cf set-env user-service KAFKA_SECURITY_PROTOCOL "$kafka_security_protocol"
+          cf set-env user-service KAFKA_SASL_MECHANISM "$kafka_sasl_mechanism"
+          cf set-env user-service KAFKA_SASL_JAAS "$kafka_sasl_jaas"
           cf set-env user-service EUREKA_CLIENT_SERVICEURL_DEFAULTZONE "$eureka_url"
           cf set-env user-service EUREKA_INSTANCE_PREFER_IP_ADDRESS false
           cf start user-service || { cf logs user-service --recent; exit 1; }
@@ -166,8 +205,10 @@ jobs:
           cf set-env quote-service SPRING_DATASOURCE_PASSWORD "${{ secrets.DB_PASS }}"
           cf set-env quote-service JWT_SECRET "${{ secrets.JWT_SECRET }}"
           cf set-env quote-service SPRING_CLOUD_CONFIG_ENABLED false
-          cf set-env quote-service SPRING_KAFKA_BOOTSTRAP_SERVERS "$kafka_brokers"
-          cf set-env quote-service KAFKA_BOOTSTRAP_SERVERS "$kafka_brokers"
+          cf set-env quote-service KAFKA_BROKERS "$kafka_brokers"
+          cf set-env quote-service KAFKA_SECURITY_PROTOCOL "$kafka_security_protocol"
+          cf set-env quote-service KAFKA_SASL_MECHANISM "$kafka_sasl_mechanism"
+          cf set-env quote-service KAFKA_SASL_JAAS "$kafka_sasl_jaas"
           cf set-env quote-service EUREKA_CLIENT_SERVICEURL_DEFAULTZONE "$eureka_url"
           cf set-env quote-service EUREKA_INSTANCE_PREFER_IP_ADDRESS false
           cf start quote-service || { cf logs quote-service --recent; exit 1; }
@@ -184,24 +225,16 @@ jobs:
           cf unset-env notification-service EUREKA_INSTANCE_SECURE_PORT || true
           cf unset-env notification-service EUREKA_INSTANCE_NON_SECURE_PORT_ENABLED || true
           cf set-env notification-service SPRING_CLOUD_CONFIG_ENABLED false
-          cf set-env notification-service SPRING_KAFKA_BOOTSTRAP_SERVERS "$kafka_brokers"
-          cf set-env notification-service KAFKA_BOOTSTRAP_SERVERS "$kafka_brokers"
-          cf set-env notification-service SPRING_MAIL_HOST "$mail_host"
-          cf set-env notification-service SPRING_MAIL_PORT "$mail_port"
+          cf set-env notification-service KAFKA_BROKERS "$kafka_brokers"
+          cf set-env notification-service KAFKA_SECURITY_PROTOCOL "$kafka_security_protocol"
+          cf set-env notification-service KAFKA_SASL_MECHANISM "$kafka_sasl_mechanism"
+          cf set-env notification-service KAFKA_SASL_JAAS "$kafka_sasl_jaas"
+          cf set-env notification-service SMTP_HOST "$smtp_host"
+          cf set-env notification-service SMTP_PORT "$smtp_port"
+          cf set-env notification-service SMTP_USER "$smtp_user"
+          cf set-env notification-service SMTP_PASS "$smtp_pass"
           cf set-env notification-service MAIL_FROM "$mail_from"
           cf set-env notification-service MAIL_TO "$mail_to"
-          if [ -n "$mail_username" ]; then
-            cf set-env notification-service SPRING_MAIL_USERNAME "$mail_username"
-          fi
-          if [ -n "$mail_password" ]; then
-            cf set-env notification-service SPRING_MAIL_PASSWORD "$mail_password"
-          fi
-          if [ -n "$mail_smtp_auth" ]; then
-            cf set-env notification-service MAIL_SMTP_AUTH "$mail_smtp_auth"
-          fi
-          if [ -n "$mail_smtp_starttls" ]; then
-            cf set-env notification-service MAIL_SMTP_STARTTLS "$mail_smtp_starttls"
-          fi
           cf set-env notification-service EUREKA_CLIENT_SERVICEURL_DEFAULTZONE "$eureka_url"
           cf set-env notification-service EUREKA_INSTANCE_PREFER_IP_ADDRESS false
           cf start notification-service || { cf logs notification-service --recent; exit 1; }
@@ -219,6 +252,7 @@ jobs:
           cf unset-env gateway SPRING_DATASOURCE_USERNAME || true
           cf unset-env gateway SPRING_DATASOURCE_PASSWORD || true
           cf unset-env gateway KAFKA_BOOTSTRAP_SERVERS || true
+          cf unset-env gateway KAFKA_BROKERS || true
           cf set-env gateway SPRING_CLOUD_CONFIG_ENABLED false
           cf set-env gateway JWT_SECRET "${{ secrets.JWT_SECRET }}"
           cf set-env gateway EUREKA_CLIENT_SERVICEURL_DEFAULTZONE "$eureka_url"
