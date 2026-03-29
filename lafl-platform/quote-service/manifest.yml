@@ -1,7 +1,7 @@
 applications:
   - name: quote-service
     path: build/libs/quote-service-0.1.0-SNAPSHOT.jar
-    memory: 768M
+    memory: 512M
     instances: 1
     no-route: true
     buildpacks:

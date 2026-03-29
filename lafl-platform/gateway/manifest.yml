@@ -1,7 +1,7 @@
 applications:
   - name: gateway
     path: build/libs/gateway-0.1.0-SNAPSHOT.jar
-    memory: 768M
+    memory: 512M
     instances: 1
     random-route: true
     buildpacks:

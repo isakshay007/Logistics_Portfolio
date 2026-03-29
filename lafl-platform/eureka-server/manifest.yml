@@ -1,7 +1,7 @@
 applications:
   - name: eureka-server
     path: build/libs/eureka-server-0.1.0-SNAPSHOT.jar
-    memory: 768M
+    memory: 512M
     instances: 1
     no-route: true
     buildpacks:
