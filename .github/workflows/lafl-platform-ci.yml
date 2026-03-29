@@ -104,7 +104,7 @@ jobs:
           cf set-env notification-service KAFKA_BOOTSTRAP_SERVERS "${{ secrets.KAFKA_BROKERS }}"
           cf start notification-service || { cf logs notification-service --recent; exit 1; }
 
-          gateway_route="$(cf app gateway | awk '/routes:/{print $2; exit}' | tr -d '\r')"
+          gateway_route="$(cf app gateway | sed -n 's/^routes:[[:space:]]*//p' | tr -d '\r' | awk '{print $1}')"
           if [ -z "$gateway_route" ]; then
             echo "Unable to resolve gateway route from cf app output."
             exit 1
