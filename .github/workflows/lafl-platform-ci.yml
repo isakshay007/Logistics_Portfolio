@@ -38,8 +38,11 @@ jobs:
       - name: Build Artifacts
         run: gradle -p lafl-platform clean build -x test
 
-      - name: Install Cloud Foundry CLI
-        uses: cloudfoundry/cli-action@v2
+      - name: Install CF CLI
+        run: |
+          curl -L "https://packages.cloudfoundry.org/stable?release=linux64-binary&version=v8&source=github" | tar -zx
+          sudo mv cf8 /usr/local/bin/cf
+          cf --version
 
       - name: Authenticate to Cloud Foundry
         run: |
