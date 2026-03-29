@@ -11,6 +11,11 @@ spring:
       server:
         native:
           search-locations: classpath:/config
+        git:
+          uri: ""
+        default-application-name: application
+  autoconfigure:
+    exclude: org.springframework.cloud.config.server.config.DefaultRepositoryConfiguration
 
 management:
   endpoints:
