@@ -14,11 +14,17 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest(properties = {
+    "spring.datasource.url=jdbc:h2:mem:testdb",
+    "spring.datasource.driver-class-name=org.h2.Driver",
+    "spring.flyway.enabled=false",
+    "spring.data.redis.repositories.enabled=false",
+    "spring.kafka.bootstrap-servers=localhost:9092",
     "spring.cloud.config.enabled=false",
     "eureka.client.enabled=false",
     "spring.autoconfigure.exclude=org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration,"
         + "org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration,"
-        + "org.springframework.boot.autoconfigure.flyway.FlywayAutoConfiguration"
+        + "org.springframework.boot.autoconfigure.flyway.FlywayAutoConfiguration,"
+        + "org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration"
 })
 @AutoConfigureMockMvc
 class QuoteOpenApiDocsTest {
