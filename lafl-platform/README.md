@@ -35,6 +35,15 @@ Each service reads:
 - `KAFKA_SASL_MECHANISM` (recommended `PLAIN`)
 - `KAFKA_SASL_JAAS` (constructed in CI/CD from username/password secrets)
 
+Kafka topics used by the platform:
+
+- `user.registered`
+- `quote.submitted`
+- `contact.submitted`
+- `shipment.status.updated`
+
+CI/CD now bootstraps these topics during deploy (idempotent create/verify) before service startup, so fresh clusters do not fail with `UNKNOWN_TOPIC_OR_PARTITION`.
+
 ### Redis (Upstash TLS)
 
 `shipment-service` Redis settings:

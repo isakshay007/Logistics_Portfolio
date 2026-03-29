@@ -59,6 +59,55 @@ jobs:
             cf app "$1" | sed -n 's/^routes:[[:space:]]*//p' | tr -d '\r' | awk '{print $1}'
           }
 
+          bootstrap_kafka_topics() {
+            local topics=("user.registered" "quote.submitted" "contact.submitted" "shipment.status.updated")
+            local rpk_image="redpandadata/redpanda:v25.3.11"
+            local tls_enabled="false"
+            local replication_factor="3"
+            local partitions="3"
+            local -a rpk_flags=()
+
+            if [[ "$kafka_security_protocol" == *SSL* ]]; then
+              tls_enabled="true"
+            fi
+
+            rpk_flags+=(-X "brokers=$kafka_brokers")
+            rpk_flags+=(-X "tls.enabled=$tls_enabled")
+            if [[ "$kafka_security_protocol" == SASL_* ]]; then
+              rpk_flags+=(-X "sasl.mechanism=$kafka_sasl_mechanism")
+              rpk_flags+=(-X "user=$kafka_username")
+              rpk_flags+=(-X "pass=$kafka_password")
+            fi
+
+            run_rpk() {
+              docker run --rm "$rpk_image" rpk "$@" "${rpk_flags[@]}"
+            }
+
+            echo "Bootstrapping Kafka topics..."
+            for topic in "${topics[@]}"; do
+              if run_rpk topic describe "$topic" >/dev/null 2>&1; then
+                echo "Kafka topic '$topic' already exists."
+                continue
+              fi
+
+              echo "Creating Kafka topic '$topic' (p=${partitions}, r=${replication_factor})..."
+              if ! run_rpk topic create "$topic" -p "$partitions" -r "$replication_factor" >/tmp/rpk-create.log 2>&1; then
+                if grep -Eqi "replication factor|invalid replication" /tmp/rpk-create.log; then
+                  echo "Retrying Kafka topic '$topic' with replication factor 1..."
+                  run_rpk topic create "$topic" -p "$partitions" -r 1 >/tmp/rpk-create.log 2>&1 || {
+                    cat /tmp/rpk-create.log
+                    exit 1
+                  }
+                else
+                  cat /tmp/rpk-create.log
+                  exit 1
+                fi
+              fi
+            done
+
+            echo "Kafka topic bootstrap complete."
+          }
+
           validation_errors=()
           kafka_brokers="${{ secrets.KAFKA_BROKERS }}"
           kafka_security_protocol="${{ secrets.KAFKA_SECURITY_PROTOCOL }}"
@@ -123,6 +172,8 @@ jobs:
             fi
             kafka_sasl_jaas="${kafka_login_module} required username=\"${escaped_kafka_username}\" password=\"${escaped_kafka_password}\";"
           fi
+
+          bootstrap_kafka_topics
 
           # config-server
           cf push config-server -f lafl-platform/config-server/manifest.yml --no-start
