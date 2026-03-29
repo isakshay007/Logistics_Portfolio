@@ -3,14 +3,14 @@ services:
   postgres:
     image: postgres:15-alpine
     environment:
-      POSTGRES_USER: lafl
-      POSTGRES_PASSWORD: lafl
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASS}
       POSTGRES_DB: lafl_user
     volumes:
       - postgres-data:/var/lib/postgresql/data
       - ./docker/postgres/init-multiple-dbs.sh:/docker-entrypoint-initdb.d/init-multiple-dbs.sh:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U lafl -d lafl_user"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d lafl_user"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -44,7 +44,7 @@ services:
       KAFKA_BROKERS: kafka:9092
       REDIS_HOST: redis
       REDIS_PORT: 6379
-      JWT_SECRET: local-dev-jwt-secret-2026-abcdef1234567890
+      JWT_SECRET: ${JWT_SECRET}
     depends_on:
       - kafka
       - redis
@@ -78,7 +78,7 @@ services:
       SPRING_DATA_REDIS_HOST: redis
       SPRING_DATA_REDIS_PORT: 6379
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-      JWT_SECRET: local-dev-jwt-secret-2026-abcdef1234567890
+      JWT_SECRET: ${JWT_SECRET}
     ports:
       - "8080:8080"
 
@@ -101,12 +101,12 @@ services:
       SPRING_CONFIG_IMPORT: optional:configserver:http://config-server:8888
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/lafl_shipment?currentSchema=shipment_service
-      SPRING_DATASOURCE_USERNAME: lafl
-      SPRING_DATASOURCE_PASSWORD: lafl
+      SPRING_DATASOURCE_USERNAME: ${DB_USER}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASS}
       REDIS_HOST: redis
       REDIS_PORT: 6379
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-      JWT_SECRET: local-dev-jwt-secret-2026-abcdef1234567890
+      JWT_SECRET: ${JWT_SECRET}
 
   user-service:
     build:
@@ -127,10 +127,10 @@ services:
       SPRING_CONFIG_IMPORT: optional:configserver:http://config-server:8888
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/lafl_user?currentSchema=user_service
-      SPRING_DATASOURCE_USERNAME: lafl
-      SPRING_DATASOURCE_PASSWORD: lafl
+      SPRING_DATASOURCE_USERNAME: ${DB_USER}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASS}
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-      JWT_SECRET: local-dev-jwt-secret-2026-abcdef1234567890
+      JWT_SECRET: ${JWT_SECRET}
 
   quote-service:
     build:
@@ -151,10 +151,10 @@ services:
       SPRING_CONFIG_IMPORT: optional:configserver:http://config-server:8888
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/lafl_quote?currentSchema=quote_service
-      SPRING_DATASOURCE_USERNAME: lafl
-      SPRING_DATASOURCE_PASSWORD: lafl
+      SPRING_DATASOURCE_USERNAME: ${DB_USER}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASS}
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-      JWT_SECRET: local-dev-jwt-secret-2026-abcdef1234567890
+      JWT_SECRET: ${JWT_SECRET}
 
   notification-service:
     build:
@@ -173,10 +173,10 @@ services:
       SPRING_CONFIG_IMPORT: optional:configserver:http://config-server:8888
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/lafl_user?currentSchema=user_service
-      SPRING_DATASOURCE_USERNAME: lafl
-      SPRING_DATASOURCE_PASSWORD: lafl
+      SPRING_DATASOURCE_USERNAME: ${DB_USER}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASS}
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-      JWT_SECRET: local-dev-jwt-secret-2026-abcdef1234567890
+      JWT_SECRET: ${JWT_SECRET}
       SPRING_MAIL_HOST: mailhog
       SPRING_MAIL_PORT: 1025
 

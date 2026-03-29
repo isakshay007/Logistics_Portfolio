@@ -18,6 +18,9 @@ jobs:
           distribution: temurin
           java-version: '17'
       - uses: gradle/actions/setup-gradle@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
       - name: Run Gradle Tests
         run: gradle -p lafl-platform test
 
@@ -34,6 +37,9 @@ jobs:
           distribution: temurin
           java-version: '17'
       - uses: gradle/actions/setup-gradle@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
 
       - name: Build Artifacts
         run: gradle -p lafl-platform clean build -x test
@@ -333,6 +339,15 @@ jobs:
             exit 1
           fi
           echo "gateway_route=$gateway_route" >> "$GITHUB_OUTPUT"
+
+      - name: Build and Deploy Frontend
+        run: |
+          cd frontend
+          npm ci
+          npx ng build --configuration production
+          cd ..
+          cf push lafl-frontend -f frontend/manifest.yml
+          cf app lafl-frontend | grep routes
 
   smoke-test:
     runs-on: ubuntu-latest

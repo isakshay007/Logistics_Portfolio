@@ -1,222 +1,225 @@
 # LAFL Logistics Platform
 
-Cloud-native logistics portfolio platform with an Angular 21 frontend and a Spring Boot microservices backend behind Spring Cloud Gateway.
+Production-grade microservices logistics platform built with Spring Boot, Spring Cloud, Kafka, PostgreSQL, Redis, and Angular - deployed on SAP BTP Cloud Foundry.
 
-## What Recruiters Can Validate Quickly
+![Build Status](https://img.shields.io/badge/build-GitHub%20Actions-blue)
+![Java 17](https://img.shields.io/badge/Java-17-orange)
+![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.3.4-6DB33F)
+![Angular](https://img.shields.io/badge/Angular-20-DD0031)
+![SAP BTP](https://img.shields.io/badge/SAP%20BTP-Cloud%20Foundry-0FAAFF)
 
-- Real microservices decomposition (Gateway + Config Server + Eureka + 4 domain services)
-- JWT auth and RBAC enforced at the gateway edge
-- Redis caching with explicit TTL + eviction behavior
-- OpenAPI/Swagger docs on core services
-- Cloud Foundry manifests + GitHub Actions CI/CD pipeline
-- One-command local startup with Docker Compose
+## Live Demo
 
-## Current Architecture (Primary Path)
+- Gateway URL: `https://gateway-turbulent-wolf-ap.cfapps.us10-001.hana.ondemand.com`
+- Frontend URL: deployed as `lafl-frontend` with a random route (get current route using `cf app lafl-frontend | grep routes`)
+
+Example curls (5 core endpoints):
+
+```bash
+BASE="https://gateway-turbulent-wolf-ap.cfapps.us10-001.hana.ondemand.com"
+
+# 1) Gateway health
+curl -s "$BASE/api/health"
+
+# 2) Shipment tracking
+curl -s "$BASE/api/v1/shipments/track?reference=LAFL-24017"
+
+# 3) User signup
+curl -s -X POST "$BASE/api/v1/auth/signup" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Demo User","email":"demo@example.com","company":"LAFL","password":"ChangeMe123!"}'
+
+# 4) Quote submission
+curl -s -X POST "$BASE/api/v1/quotes" \
+  -H "Content-Type: application/json" \
+  -d '{"company":"LAFL","contactName":"Demo User","email":"demo@example.com","serviceType":"Freight Forwarding","origin":"NYC","destination":"SFO","shipmentType":"Air","cargoDetails":"5 pallets"}'
+
+# 5) Contact submission
+curl -s -X POST "$BASE/api/v1/contacts" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Demo User","email":"demo@example.com","company":"LAFL","message":"Need a logistics quote"}'
+```
+
+## Migration Story
+
+The project started as a Node/Express monolith and scored roughly 4/10 for migration readiness: limited service boundaries, minimal eventing, and no production-grade deployment choreography. It was rebuilt into a Spring Boot microservices platform with service discovery, centralized configuration, event-driven notifications, and gateway-level security enforcement. The new architecture now covers core enterprise logistics patterns: distributed services, asynchronous Kafka workflows, schema-managed persistence, and cloud deployment automation. The result is a significantly more production-aligned foundation that maps to the day-to-day stack used by large logistics engineering teams.
+
+## Architecture
 
 ```mermaid
 flowchart LR
-  UI["Angular 21 Frontend"] --> GW["Spring Cloud Gateway :8080"]
-  GW --> USER["user-service"]
-  GW --> SHIP["shipment-service"]
-  GW --> QUOTE["quote-service"]
-  USER --> PG[("PostgreSQL")]
-  SHIP --> PG
-  QUOTE --> PG
-  SHIP --> REDIS[("Redis")]
-  GW --> NOTIF["notification-service"]
-  NOTIF --> SMTP["SMTP / MailHog"]
-  CFG["config-server"] --> GW
-  CFG --> USER
-  CFG --> SHIP
-  CFG --> QUOTE
-  CFG --> NOTIF
-  EUREKA["eureka-server"] --> GW
-  EUREKA --> USER
-  EUREKA --> SHIP
-  EUREKA --> QUOTE
-  EUREKA --> NOTIF
+  A[Angular SPA] --> B[Gateway]
+  B --> C[User Service]
+  B --> D[Shipment Service]
+  B --> E[Quote Service]
+  B --> F[Notification Service Trigger API]
+
+  C --> G[(PostgreSQL user_service schema)]
+  D --> H[(PostgreSQL shipment_service schema)]
+  E --> I[(PostgreSQL quote_service schema)]
+
+  D --> J[(Redis Cache)]
+
+  C --> K[(Kafka user.registered)]
+  E --> L[(Kafka quote.submitted)]
+  E --> M[(Kafka contact.submitted)]
+  D --> N[(Kafka shipment.status.updated)]
+
+  K --> O[Notification Service]
+  L --> O
+  M --> O
+  N --> O
+
+  O --> P[Gmail SMTP]
+  Q[Config Server] --> B
+  Q --> C
+  Q --> D
+  Q --> E
+  Q --> O
+  R[Eureka Server] --> B
+  R --> C
+  R --> D
+  R --> E
+  R --> O
 ```
 
-## Implemented Backend Capabilities
+## Tech Stack
 
-### API Gateway (Spring Cloud Gateway)
+| Layer | Technology | Purpose |
+|---|---|---|
+| Frontend | Angular 20 | SPA for tracking, signup, quote, and contact flows |
+| API Edge | Spring Cloud Gateway | Central routing, JWT verification, RBAC enforcement |
+| Service Discovery | Eureka | Dynamic service registration and discovery |
+| Config | Spring Cloud Config Server | Centralized runtime config from environment |
+| Microservices | Spring Boot 3.3.x | Core business services |
+| Auth | JWT + BCrypt | Token issuance/validation and secure password hashing |
+| Messaging | Kafka / Redpanda | Event-driven notifications and decoupled workflows |
+| Data | PostgreSQL (Supabase) | Relational persistence across service schemas |
+| Migrations | Flyway | Versioned database schema migrations |
+| Cache | Redis (Upstash TLS in cloud) | Shipment tracking response caching |
+| Email | Gmail SMTP | Real-time notification delivery |
+| Deployment | SAP BTP Cloud Foundry | Managed runtime for all services |
+| CI/CD | GitHub Actions | Test, build, deploy backend + frontend, smoke test |
 
-- JWT Bearer validation using `jwt.secret` from Config Server
-- Adds `X-User-Id` and `X-User-Role` headers downstream after successful auth
-- Route policy:
-  - Public: `GET /api/v1/shipments/track`, `POST /api/v1/quotes/**`, `POST /api/v1/contacts/**`, `POST /api/v1/auth/**`
-  - Valid JWT required: `POST /api/v1/shipments/**`
-  - `ROLE_OPS` required: `GET /api/v1/ops/**`
-- Gateway health endpoint: `GET /api/health`
+## Service Breakdown
 
-### User Service
+| Service | What It Does | Key Endpoints | Database | Kafka Topics |
+|---|---|---|---|---|
+| `config-server` | Central config source for runtime values | N/A (config infrastructure) | None | None |
+| `eureka-server` | Service registry/discovery | `/eureka/*` | None | None |
+| `gateway` | API routing, JWT validation, RBAC checks | `/api/health` + routed `/api/v1/*` | None | None |
+| `user-service` | Signup/login, JWT issuing, account management | `POST /api/v1/auth/signup`, `POST /api/v1/auth/login` | `user_service` schema | Produces `user.registered` |
+| `shipment-service` | Shipment tracking + status updates + cache | `GET /api/v1/shipments/track`, `PATCH /api/v1/shipments/{reference}/status` | `shipment_service` schema | Produces `shipment.status.updated` |
+| `quote-service` | Quote and contact intake + ops views | `POST /api/v1/quotes`, `POST /api/v1/contacts`, `GET /api/v1/ops/overview`, `GET /api/v1/ops/issues` | `quote_service` schema | Produces `quote.submitted`, `contact.submitted` |
+| `notification-service` | Consumes Kafka events and sends SMTP mail | `POST /api/v1/notifications/trigger` (ops trigger) | None | Consumes all 4 topics |
 
-- `POST /api/v1/auth/signup`
-- `POST /api/v1/auth/login` with BCrypt password verification
-- JWT issuance with `sub`, `role`, `iat`, `exp` (24h)
-- Uses PostgreSQL via JPA repository (`UserAccountRepository`)
+## Kafka Event Flow
 
-### Shipment Service
+```mermaid
+flowchart LR
+  U[user-service] -->|user.registered| K1[(Kafka)]
+  Q[quote-service] -->|quote.submitted| K1
+  Q -->|contact.submitted| K1
+  S[shipment-service] -->|shipment.status.updated| K1
+  K1 --> N[notification-service]
+  N --> G[Gmail SMTP notifications]
+```
 
-- Tracking and status update APIs (`/api/v1/shipments/...`)
-- Redis caching:
-  - `@Cacheable` on tracking lookup (`shipments` cache)
-  - `@CacheEvict` on status update
-  - TTL configured to 10 minutes
+Topics in use:
+- `user.registered`
+- `quote.submitted`
+- `contact.submitted`
+- `shipment.status.updated`
 
-### Quote Service
+## Security Model
 
-- `POST /api/v1/quotes`
-- `POST /api/v1/contacts`
-- Ops read endpoints:
-  - `GET /api/v1/ops/overview`
-  - `GET /api/v1/ops/issues`
+- JWTs are issued by `user-service` after successful signup/login.
+- `gateway` validates incoming Bearer tokens using `jwt.secret` and rejects invalid tokens.
+- RBAC is enforced at gateway level:
+  - Ops-only access for `GET /api/v1/ops/**` and `POST /api/v1/notifications/**`
+  - Auth-required routes for write operations such as shipment status changes
+- Passwords are hashed with BCrypt before persistence.
 
-### Notification Service
+## Database Design
 
-- Dispatches event-specific notification email logic (SMTP)
-- Demo trigger endpoint: `POST /api/v1/notifications/trigger`
+- PostgreSQL runs with 3 service-owned schemas:
+  - `shipment_service`
+  - `user_service`
+  - `quote_service`
+- Flyway migrations are applied per service at startup.
+- Production uses Supabase PostgreSQL via environment-injected `DB_URL` (pooler URL recommended).
 
-### OpenAPI / Swagger
+## Redis Caching
 
-Enabled for:
+- `shipment-service` caches tracking lookups in Redis.
+- Cache key: shipment reference.
+- TTL: 10 minutes.
+- Eviction: automatic on shipment status update (`@CacheEvict`).
 
-- `shipment-service`
-- `user-service`
-- `quote-service`
+## Local Development Quickstart
 
-Endpoints per service:
-
-- Swagger UI: `/swagger-ui.html`
-- OpenAPI JSON: `/v3/api-docs`
-
-Each includes a Bearer JWT security scheme for authenticated endpoint testing.
-
-## Frontend Integration
-
-Angular app is now wired to the Spring gateway (`http://localhost:8080`) in `frontend/src/app/api.service.ts` for:
-
-- shipment tracking
-- quote submission
-- contact submission
-- user signup
-
-## Database Targets
-
-- Production/Cloud: Supabase PostgreSQL (`jdbc:postgresql://db.epvdfxwkqdaaeornsotb.supabase.co:5432/postgres`)
-- Local development: Docker Compose PostgreSQL container
-
-## Local Development
-
-### Prerequisites
-
-- Docker + Docker Compose
+Prerequisites:
 - Java 17+
+- Docker + Docker Compose
 - Node.js 20+
 
-### 1. Start Platform Stack (one command)
+Build all backend jars:
 
 ```bash
-docker compose -f lafl-platform/docker-compose.yml up --build
+cd lafl-platform
+./build-all.sh
 ```
 
-This starts PostgreSQL, Redis, Config Server, Eureka, Gateway, shipment-service, user-service, quote-service, and notification-service.
-For production deployments, services connect to Supabase PostgreSQL through environment variables.
+Run platform locally:
 
-Useful local endpoints:
+```bash
+cd lafl-platform
+docker compose up --build -d
+```
 
-- Gateway: `http://localhost:8080`
-- Config Server: `http://localhost:8888`
+Smoke test locally:
+
+```bash
+BASE="http://localhost:8080"
+curl -s "$BASE/api/health"
+curl -s "$BASE/api/v1/shipments/track?reference=LAFL-24017"
+```
+
+Useful local dashboards:
 - Eureka: `http://localhost:8761`
-- MailHog UI: `http://localhost:8025`
+- Mailhog UI: `http://localhost:8025`
 
-### 2. Run Angular Frontend
+## Production Deployment (SAP BTP + GitHub Actions)
 
-```bash
-npm --prefix frontend install
-npm --prefix frontend start
-```
+### Required GitHub Secrets
 
-Frontend dev URL: `http://localhost:4200`
+| Secret | Description |
+|---|---|
+| `CF_API` | Cloud Foundry API endpoint |
+| `CF_USERNAME` | Cloud Foundry username |
+| `CF_PASSWORD` | Cloud Foundry password |
+| `CF_ORG` | Cloud Foundry org |
+| `CF_SPACE` | Cloud Foundry space |
+| `DB_URL` | Supabase/PostgreSQL JDBC URL |
+| `DB_USER` | PostgreSQL username |
+| `DB_PASS` | PostgreSQL password |
+| `JWT_SECRET` | JWT signing secret |
+| `KAFKA_BROKERS` | Redpanda bootstrap brokers |
+| `KAFKA_SECURITY_PROTOCOL` | Kafka protocol (`SASL_SSL`) |
+| `KAFKA_SASL_MECHANISM` | Kafka mechanism (`SCRAM-SHA-256`/`SCRAM-SHA-512`/`PLAIN`) |
+| `KAFKA_USERNAME` | Redpanda SASL username |
+| `KAFKA_PASSWORD` | Redpanda SASL password |
+| `REDIS_HOST` | Upstash Redis host |
+| `REDIS_PORT` | Upstash Redis port |
+| `REDIS_PASSWORD` | Upstash Redis password |
+| `SMTP_HOST` | Gmail SMTP host (`smtp.gmail.com`) |
+| `SMTP_PORT` | Gmail SMTP port (`587`) |
+| `SMTP_USER` | Gmail SMTP username |
+| `SMTP_PASS` | Gmail app password |
+| `MAIL_FROM` | Sender email |
+| `MAIL_TO` | Recipient email |
 
-### 3. Run Test Suite
-
-```bash
-gradle -p lafl-platform test
-```
-
-## Quick API Smoke Flow
-
-### Signup
-
-```bash
-curl -X POST http://localhost:8080/api/v1/auth/signup \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name":"Demo User",
-    "email":"demo@example.com",
-    "company":"LAFL",
-    "phone":"555-0100",
-    "interest":"Ops dashboard",
-    "password":"password123"
-  }'
-```
-
-### Login and extract JWT
-
-```bash
-TOKEN=$(curl -s -X POST http://localhost:8080/api/v1/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"email":"demo@example.com","password":"password123"}' | jq -r '.token')
-```
-
-### Try ROLE_OPS route
-
-```bash
-curl -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/v1/ops/overview
-```
-
-## CI/CD
-
-GitHub Actions workflow: `.github/workflows/lafl-platform-ci.yml`
-
-Pipeline stages:
-
-1. `build-and-test` (runs `gradle -p lafl-platform test`)
-2. `deploy` (Cloud Foundry `cf push` in startup order)
-3. `smoke-test` (`GET /api/health` through gateway)
-
-Required GitHub Secrets:
-
-- `CF_API`
-- `CF_USERNAME`
-- `CF_PASSWORD`
-- `CF_ORG`
-- `CF_SPACE`
-- `JWT_SECRET`
-- `DB_URL`
-- `DB_USER`
-- `DB_PASS`
-- `KAFKA_BROKERS`
-- `KAFKA_SECURITY_PROTOCOL`
-- `KAFKA_SASL_MECHANISM`
-- `KAFKA_USERNAME`
-- `KAFKA_PASSWORD`
-- `REDIS_HOST`
-- `REDIS_PORT`
-- `REDIS_PASSWORD`
-- `SMTP_HOST`
-- `SMTP_PORT`
-- `SMTP_USER`
-- `SMTP_PASS`
-- `MAIL_FROM`
-- `MAIL_TO`
-
-## Cloud Foundry Deployment
-
-Manifests exist per module under `lafl-platform/*/manifest.yml`.
-
-Startup order:
+### Startup Order
 
 1. `config-server`
 2. `eureka-server`
@@ -225,14 +228,59 @@ Startup order:
 5. `quote-service`
 6. `notification-service`
 7. `gateway`
+8. `lafl-frontend`
 
-## Repository Layout
+### Useful CF Commands
 
-- `frontend/` Angular 21 SPA
-- `lafl-platform/` Spring Cloud microservices platform
-- `index.js` legacy Express backend retained from pre-migration implementation
-- `deploy/` legacy deployment scripts
+```bash
+cf apps
+cf app gateway
+cf app lafl-frontend
+cf logs gateway --recent
+```
 
-## Legacy Note
+## Frontend (Angular SPA)
 
-This repo still contains the original Express/Cloud Run implementation for historical context, but active end-to-end platform work is centered on the Spring microservices stack under `lafl-platform/`.
+Local dev:
+
+```bash
+cd frontend
+npm ci
+npx ng serve
+```
+
+Build for production:
+
+```bash
+cd frontend
+npx ng build --configuration production
+```
+
+Environment routing:
+- `src/environments/environment.ts` -> local gateway (`http://localhost:8080`)
+- `src/environments/environment.prod.ts` -> Cloud Foundry gateway URL
+
+Cloud Foundry deployment:
+- Staticfile buildpack via `frontend/manifest.yml`
+- Build output path: `dist/frontend/browser`
+
+## CI/CD Pipeline
+
+GitHub Actions workflow (`.github/workflows/lafl-platform-ci.yml`) executes:
+
+1. Run Gradle tests.
+2. Build backend artifacts.
+3. Authenticate to Cloud Foundry.
+4. Deploy 7 backend services in startup order.
+5. Inject required env vars/secrets per service.
+6. Bootstrap Kafka topics before service startup.
+7. Build and deploy Angular frontend (`lafl-frontend`).
+8. Run smoke tests against gateway endpoints.
+
+## Improvement Roadmap
+
+- Move to fully managed Kafka with stronger partition strategy and DLQ policies.
+- Enable Redis cluster mode and cross-zone failover for cache resilience.
+- Persist frontend auth state securely with refresh-token lifecycle support.
+- Add mobile app clients (driver/ops experiences) on top of existing APIs.
+- Reintroduce and tune gateway rate limiting backed by Redis for production traffic control.

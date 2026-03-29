@@ -1,0 +1,8 @@
+applications:
+- name: lafl-frontend
+  memory: 128M
+  instances: 1
+  buildpacks:
+    - staticfile_buildpack
+  path: dist/frontend/browser
+  random-route: true

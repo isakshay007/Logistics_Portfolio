@@ -2,6 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { tap } from 'rxjs/operators';
+import { environment } from '../environments/environment';
 
 export interface TrackingIssue {
   severity: string;
@@ -53,7 +54,7 @@ export interface AuthResponse {
 @Injectable({ providedIn: 'root' })
 export class ApiService {
   private readonly http = inject(HttpClient);
-  private readonly gatewayBaseUrl = 'http://localhost:8080';
+  private readonly gatewayBaseUrl = environment.gatewayBaseUrl;
   private authToken: string | null = null;
 
   track(reference: string): Observable<TrackingResponse> {

@@ -8,8 +8,8 @@ spring:
     import: optional:configserver:${CONFIG_SERVER_URL:http://localhost:8888}
   datasource:
     url: ${DB_URL}
-    username: ${DB_USER:postgres}
-    password: ${DB_PASS:lafl}
+    username: ${DB_USER}
+    password: ${DB_PASS}
   jpa:
     hibernate:
       ddl-auto: validate
