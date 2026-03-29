@@ -81,6 +81,7 @@ jobs:
           if [ -z "$kafka_sasl_mechanism" ]; then
             kafka_sasl_mechanism="PLAIN"
           fi
+          kafka_sasl_mechanism="$(echo "$kafka_sasl_mechanism" | tr '[:lower:]' '[:upper:]')"
 
           if [ -z "$kafka_brokers" ]; then
             validation_errors+=("KAFKA_BROKERS is missing.")
@@ -90,6 +91,9 @@ jobs:
           if [[ "$kafka_security_protocol" == SASL_* ]]; then
             if [ -z "$kafka_username" ] || [ -z "$kafka_password" ]; then
               validation_errors+=("KAFKA_USERNAME and KAFKA_PASSWORD are required when KAFKA_SECURITY_PROTOCOL uses SASL.")
+            fi
+            if [ "$kafka_sasl_mechanism" != "PLAIN" ] && [ "$kafka_sasl_mechanism" != "SCRAM-SHA-256" ] && [ "$kafka_sasl_mechanism" != "SCRAM-SHA-512" ]; then
+              validation_errors+=("KAFKA_SASL_MECHANISM must be one of: PLAIN, SCRAM-SHA-256, SCRAM-SHA-512.")
             fi
           fi
           if [ -z "$redis_host" ] || [ -z "$redis_port" ] || [ -z "$redis_password" ]; then
@@ -113,7 +117,11 @@ jobs:
             escaped_kafka_username="${escaped_kafka_username//\"/\\\"}"
             escaped_kafka_password="${kafka_password//\\/\\\\}"
             escaped_kafka_password="${escaped_kafka_password//\"/\\\"}"
-            kafka_sasl_jaas="org.apache.kafka.common.security.plain.PlainLoginModule required username=\"${escaped_kafka_username}\" password=\"${escaped_kafka_password}\";"
+            kafka_login_module="org.apache.kafka.common.security.plain.PlainLoginModule"
+            if [ "$kafka_sasl_mechanism" = "SCRAM-SHA-256" ] || [ "$kafka_sasl_mechanism" = "SCRAM-SHA-512" ]; then
+              kafka_login_module="org.apache.kafka.common.security.scram.ScramLoginModule"
+            fi
+            kafka_sasl_jaas="${kafka_login_module} required username=\"${escaped_kafka_username}\" password=\"${escaped_kafka_password}\";"
           fi
 
           # config-server
