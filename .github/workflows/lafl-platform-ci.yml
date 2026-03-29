@@ -61,16 +61,16 @@ jobs:
           cf set-env config-server SPRING_DATASOURCE_USERNAME "${{ secrets.DB_USER }}"
           cf set-env config-server SPRING_DATASOURCE_PASSWORD "${{ secrets.DB_PASS }}"
           cf set-env config-server JWT_SECRET "${{ secrets.JWT_SECRET }}"
-          cf start config-server
+          cf start config-server || { cf logs config-server --recent; exit 1; }
 
           # eureka-server
           cf push eureka-server -f lafl-platform/eureka-server/manifest.yml --no-start
-          cf start eureka-server
+          cf start eureka-server || { cf logs eureka-server --recent; exit 1; }
 
           # gateway
           cf push gateway -f lafl-platform/gateway/manifest.yml --no-start
           cf set-env gateway JWT_SECRET "${{ secrets.JWT_SECRET }}"
-          cf start gateway
+          cf start gateway || { cf logs gateway --recent; exit 1; }
 
           # shipment-service
           cf push shipment-service -f lafl-platform/shipment-service/manifest.yml --no-start
@@ -79,7 +79,7 @@ jobs:
           cf set-env shipment-service SPRING_DATASOURCE_PASSWORD "${{ secrets.DB_PASS }}"
           cf set-env shipment-service JWT_SECRET "${{ secrets.JWT_SECRET }}"
           cf set-env shipment-service KAFKA_BOOTSTRAP_SERVERS "${{ secrets.KAFKA_BROKERS }}"
-          cf start shipment-service
+          cf start shipment-service || { cf logs shipment-service --recent; exit 1; }
 
           # user-service
           cf push user-service -f lafl-platform/user-service/manifest.yml --no-start
@@ -88,7 +88,7 @@ jobs:
           cf set-env user-service SPRING_DATASOURCE_PASSWORD "${{ secrets.DB_PASS }}"
           cf set-env user-service JWT_SECRET "${{ secrets.JWT_SECRET }}"
           cf set-env user-service KAFKA_BOOTSTRAP_SERVERS "${{ secrets.KAFKA_BROKERS }}"
-          cf start user-service
+          cf start user-service || { cf logs user-service --recent; exit 1; }
 
           # quote-service
           cf push quote-service -f lafl-platform/quote-service/manifest.yml --no-start
@@ -97,12 +97,12 @@ jobs:
           cf set-env quote-service SPRING_DATASOURCE_PASSWORD "${{ secrets.DB_PASS }}"
           cf set-env quote-service JWT_SECRET "${{ secrets.JWT_SECRET }}"
           cf set-env quote-service KAFKA_BOOTSTRAP_SERVERS "${{ secrets.KAFKA_BROKERS }}"
-          cf start quote-service
+          cf start quote-service || { cf logs quote-service --recent; exit 1; }
 
           # notification-service
           cf push notification-service -f lafl-platform/notification-service/manifest.yml --no-start
           cf set-env notification-service KAFKA_BOOTSTRAP_SERVERS "${{ secrets.KAFKA_BROKERS }}"
-          cf start notification-service
+          cf start notification-service || { cf logs notification-service --recent; exit 1; }
 
           gateway_route="$(cf app gateway | awk '/routes:/{print $2; exit}' | tr -d '\r')"
           if [ -z "$gateway_route" ]; then

@@ -9,6 +9,6 @@ applications:
     env:
       CF_APP_NAME: eureka-server
       SPRING_PROFILES_ACTIVE: cloud
-      JAVA_OPTS: "-XX:ReservedCodeCacheSize=32M -XX:MaxDirectMemorySize=10M -Xss256k -XX:MaxMetaspaceSize=96M -XX:+UseSerialGC"
+      JAVA_OPTS: "-XX:ReservedCodeCacheSize=32M -XX:MaxDirectMemorySize=10M -Xss256k -XX:+UseSerialGC"
       JBP_CONFIG_OPEN_JDK_JRE: '{ jre: { version: 17.+ } }'
       JBP_CONFIG_JVM_KILL: 'enabled: false'

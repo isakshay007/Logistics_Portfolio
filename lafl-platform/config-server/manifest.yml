@@ -11,6 +11,6 @@ applications:
       SPRING_PROFILES_ACTIVE: native,cloud
       SPRING_CLOUD_CONFIG_SERVER_NATIVE_SEARCH_LOCATIONS: classpath:/config
       SPRING_CLOUD_CONFIG_SERVER_GIT_URI: ""
-      JAVA_OPTS: "-XX:ReservedCodeCacheSize=32M -XX:MaxDirectMemorySize=10M -Xss256k -XX:MaxMetaspaceSize=96M -XX:+UseSerialGC"
+      JAVA_OPTS: "-XX:ReservedCodeCacheSize=32M -XX:MaxDirectMemorySize=10M -Xss256k -XX:+UseSerialGC"
       JBP_CONFIG_OPEN_JDK_JRE: '{ jre: { version: 17.+ } }'
       JBP_CONFIG_JVM_KILL: 'enabled: false'
