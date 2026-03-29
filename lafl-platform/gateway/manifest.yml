@@ -10,8 +10,6 @@ applications:
       CF_APP_NAME: gateway
       SPRING_PROFILES_ACTIVE: cloud
       SERVER_PORT: 8080
-      KAFKA_BOOTSTRAP_SERVERS: ((KAFKA_BOOTSTRAP_SERVERS))
-      JWT_SECRET: ((JWT_SECRET))
       JAVA_OPTS: "-XX:ReservedCodeCacheSize=32M -XX:MaxDirectMemorySize=10M -Xss256k -XX:MaxMetaspaceSize=96M -XX:+UseSerialGC"
       JBP_CONFIG_OPEN_JDK_JRE: '{ jre: { version: 17.+ } }'
       JBP_CONFIG_JVM_KILL: 'enabled: false'
