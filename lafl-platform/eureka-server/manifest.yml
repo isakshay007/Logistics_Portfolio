@@ -3,7 +3,6 @@ applications:
     path: build/libs/eureka-server-0.1.0-SNAPSHOT.jar
     memory: 512M
     instances: 1
-    no-route: true
     buildpacks:
       - java_buildpack
     env:

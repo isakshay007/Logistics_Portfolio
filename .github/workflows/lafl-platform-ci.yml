@@ -66,10 +66,17 @@ jobs:
           # eureka-server
           cf push eureka-server -f lafl-platform/eureka-server/manifest.yml --no-start
           cf start eureka-server || { cf logs eureka-server --recent; exit 1; }
+          eureka_route="$(cf app eureka-server | sed -n 's/^routes:[[:space:]]*//p' | tr -d '\r' | awk '{print $1}')"
+          if [ -z "$eureka_route" ]; then
+            echo "Unable to resolve eureka-server route from cf app output."
+            exit 1
+          fi
+          eureka_url="https://${eureka_route}/eureka/"
 
           # gateway
           cf push gateway -f lafl-platform/gateway/manifest.yml --no-start
           cf set-env gateway JWT_SECRET "${{ secrets.JWT_SECRET }}"
+          cf set-env gateway EUREKA_CLIENT_SERVICEURL_DEFAULTZONE "$eureka_url"
           cf start gateway || { cf logs gateway --recent; exit 1; }
 
           # shipment-service
@@ -79,6 +86,7 @@ jobs:
           cf set-env shipment-service SPRING_DATASOURCE_PASSWORD "${{ secrets.DB_PASS }}"
           cf set-env shipment-service JWT_SECRET "${{ secrets.JWT_SECRET }}"
           cf set-env shipment-service KAFKA_BOOTSTRAP_SERVERS "${{ secrets.KAFKA_BROKERS }}"
+          cf set-env shipment-service EUREKA_CLIENT_SERVICEURL_DEFAULTZONE "$eureka_url"
           cf start shipment-service || { cf logs shipment-service --recent; exit 1; }
 
           # user-service
@@ -88,6 +96,7 @@ jobs:
           cf set-env user-service SPRING_DATASOURCE_PASSWORD "${{ secrets.DB_PASS }}"
           cf set-env user-service JWT_SECRET "${{ secrets.JWT_SECRET }}"
           cf set-env user-service KAFKA_BOOTSTRAP_SERVERS "${{ secrets.KAFKA_BROKERS }}"
+          cf set-env user-service EUREKA_CLIENT_SERVICEURL_DEFAULTZONE "$eureka_url"
           cf start user-service || { cf logs user-service --recent; exit 1; }
 
           # quote-service
@@ -97,11 +106,13 @@ jobs:
           cf set-env quote-service SPRING_DATASOURCE_PASSWORD "${{ secrets.DB_PASS }}"
           cf set-env quote-service JWT_SECRET "${{ secrets.JWT_SECRET }}"
           cf set-env quote-service KAFKA_BOOTSTRAP_SERVERS "${{ secrets.KAFKA_BROKERS }}"
+          cf set-env quote-service EUREKA_CLIENT_SERVICEURL_DEFAULTZONE "$eureka_url"
           cf start quote-service || { cf logs quote-service --recent; exit 1; }
 
           # notification-service
           cf push notification-service -f lafl-platform/notification-service/manifest.yml --no-start
           cf set-env notification-service KAFKA_BOOTSTRAP_SERVERS "${{ secrets.KAFKA_BROKERS }}"
+          cf set-env notification-service EUREKA_CLIENT_SERVICEURL_DEFAULTZONE "$eureka_url"
           cf start notification-service || { cf logs notification-service --recent; exit 1; }
 
           gateway_route="$(cf app gateway | sed -n 's/^routes:[[:space:]]*//p' | tr -d '\r' | awk '{print $1}')"
