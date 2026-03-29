@@ -67,6 +67,8 @@ public class LoggingQuoteEventPublisher implements QuoteEventPublisher {
             kafkaTemplate.send(topic, key, objectMapper.writeValueAsString(payload));
         } catch (JsonProcessingException exception) {
             logger.error("Unable to serialize event payload for topic {}", topic, exception);
+        } catch (RuntimeException exception) {
+            logger.warn("Kafka publish skipped for topic {} and key {}: {}", topic, key, exception.getMessage());
         }
     }
 }

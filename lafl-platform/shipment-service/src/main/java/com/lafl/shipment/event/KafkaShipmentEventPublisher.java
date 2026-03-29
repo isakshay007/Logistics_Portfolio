@@ -4,12 +4,16 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.lafl.shipment.domain.Shipment;
 import com.lafl.shipment.events.ShipmentStatusUpdatedEvent;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 
 @Component
 public class KafkaShipmentEventPublisher implements ShipmentEventPublisher {
+
+    private static final Logger logger = LoggerFactory.getLogger(KafkaShipmentEventPublisher.class);
 
     private final KafkaTemplate<String, String> kafkaTemplate;
     private final ObjectMapper objectMapper;
@@ -37,6 +41,9 @@ public class KafkaShipmentEventPublisher implements ShipmentEventPublisher {
             kafkaTemplate.send(topic, shipment.getReference(), objectMapper.writeValueAsString(event));
         } catch (JsonProcessingException exception) {
             throw new IllegalStateException("Unable to serialize shipment event", exception);
+        } catch (RuntimeException exception) {
+            logger.warn("Kafka publish skipped for topic {} and shipment {}: {}", topic, shipment.getReference(),
+                exception.getMessage());
         }
     }
 }

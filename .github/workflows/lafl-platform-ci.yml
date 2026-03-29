@@ -59,12 +59,39 @@ jobs:
             cf app "$1" | sed -n 's/^routes:[[:space:]]*//p' | tr -d '\r' | awk '{print $1}'
           }
 
+          kafka_brokers="${{ secrets.KAFKA_BROKERS }}"
+          if [ -z "$kafka_brokers" ] || [[ "$kafka_brokers" == localhost* ]]; then
+            echo "KAFKA_BROKERS secret is missing or points to localhost. Refusing deployment."
+            exit 1
+          fi
+          redis_host="${{ secrets.REDIS_HOST }}"
+          redis_port="${{ secrets.REDIS_PORT }}"
+          mail_host="${{ secrets.MAIL_HOST }}"
+          mail_port="${{ secrets.MAIL_PORT }}"
+          mail_username="${{ secrets.MAIL_USERNAME }}"
+          mail_password="${{ secrets.MAIL_PASSWORD }}"
+          mail_smtp_auth="${{ secrets.MAIL_SMTP_AUTH }}"
+          mail_smtp_starttls="${{ secrets.MAIL_SMTP_STARTTLS }}"
+          mail_from="${{ secrets.MAIL_FROM }}"
+          mail_to="${{ secrets.MAIL_TO }}"
+          if [ -z "$mail_host" ] || [ -z "$mail_port" ] || [ -z "$mail_from" ] || [ -z "$mail_to" ]; then
+            echo "MAIL_HOST, MAIL_PORT, MAIL_FROM, and MAIL_TO secrets are required for notification email delivery."
+            exit 1
+          fi
+
           # config-server
           cf push config-server -f lafl-platform/config-server/manifest.yml --no-start
           cf set-env config-server SPRING_DATASOURCE_URL "${{ secrets.DB_URL }}"
           cf set-env config-server SPRING_DATASOURCE_USERNAME "${{ secrets.DB_USER }}"
           cf set-env config-server SPRING_DATASOURCE_PASSWORD "${{ secrets.DB_PASS }}"
           cf set-env config-server JWT_SECRET "${{ secrets.JWT_SECRET }}"
+          cf set-env config-server KAFKA_BROKERS "$kafka_brokers"
+          if [ -n "$redis_host" ]; then
+            cf set-env config-server REDIS_HOST "$redis_host"
+          fi
+          if [ -n "$redis_port" ]; then
+            cf set-env config-server REDIS_PORT "$redis_port"
+          fi
           cf start config-server || { cf logs config-server --recent; exit 1; }
 
           # eureka-server
@@ -87,7 +114,16 @@ jobs:
           cf set-env shipment-service SPRING_DATASOURCE_USERNAME "${{ secrets.DB_USER }}"
           cf set-env shipment-service SPRING_DATASOURCE_PASSWORD "${{ secrets.DB_PASS }}"
           cf set-env shipment-service JWT_SECRET "${{ secrets.JWT_SECRET }}"
-          cf set-env shipment-service KAFKA_BOOTSTRAP_SERVERS "${{ secrets.KAFKA_BROKERS }}"
+          cf set-env shipment-service SPRING_CLOUD_CONFIG_ENABLED false
+          cf set-env shipment-service SPRING_KAFKA_BOOTSTRAP_SERVERS "$kafka_brokers"
+          cf set-env shipment-service KAFKA_BOOTSTRAP_SERVERS "$kafka_brokers"
+          cf set-env shipment-service SPRING_CACHE_TYPE simple
+          if [ -n "$redis_host" ]; then
+            cf set-env shipment-service SPRING_DATA_REDIS_HOST "$redis_host"
+          fi
+          if [ -n "$redis_port" ]; then
+            cf set-env shipment-service SPRING_DATA_REDIS_PORT "$redis_port"
+          fi
           cf set-env shipment-service EUREKA_CLIENT_SERVICEURL_DEFAULTZONE "$eureka_url"
           cf set-env shipment-service EUREKA_INSTANCE_PREFER_IP_ADDRESS false
           cf start shipment-service || { cf logs shipment-service --recent; exit 1; }
@@ -107,7 +143,9 @@ jobs:
           cf set-env user-service SPRING_DATASOURCE_USERNAME "${{ secrets.DB_USER }}"
           cf set-env user-service SPRING_DATASOURCE_PASSWORD "${{ secrets.DB_PASS }}"
           cf set-env user-service JWT_SECRET "${{ secrets.JWT_SECRET }}"
-          cf set-env user-service KAFKA_BOOTSTRAP_SERVERS "${{ secrets.KAFKA_BROKERS }}"
+          cf set-env user-service SPRING_CLOUD_CONFIG_ENABLED false
+          cf set-env user-service SPRING_KAFKA_BOOTSTRAP_SERVERS "$kafka_brokers"
+          cf set-env user-service KAFKA_BOOTSTRAP_SERVERS "$kafka_brokers"
           cf set-env user-service EUREKA_CLIENT_SERVICEURL_DEFAULTZONE "$eureka_url"
           cf set-env user-service EUREKA_INSTANCE_PREFER_IP_ADDRESS false
           cf start user-service || { cf logs user-service --recent; exit 1; }
@@ -127,7 +165,9 @@ jobs:
           cf set-env quote-service SPRING_DATASOURCE_USERNAME "${{ secrets.DB_USER }}"
           cf set-env quote-service SPRING_DATASOURCE_PASSWORD "${{ secrets.DB_PASS }}"
           cf set-env quote-service JWT_SECRET "${{ secrets.JWT_SECRET }}"
-          cf set-env quote-service KAFKA_BOOTSTRAP_SERVERS "${{ secrets.KAFKA_BROKERS }}"
+          cf set-env quote-service SPRING_CLOUD_CONFIG_ENABLED false
+          cf set-env quote-service SPRING_KAFKA_BOOTSTRAP_SERVERS "$kafka_brokers"
+          cf set-env quote-service KAFKA_BOOTSTRAP_SERVERS "$kafka_brokers"
           cf set-env quote-service EUREKA_CLIENT_SERVICEURL_DEFAULTZONE "$eureka_url"
           cf set-env quote-service EUREKA_INSTANCE_PREFER_IP_ADDRESS false
           cf start quote-service || { cf logs quote-service --recent; exit 1; }
@@ -143,7 +183,25 @@ jobs:
           cf unset-env notification-service EUREKA_INSTANCE_SECURE_PORT_ENABLED || true
           cf unset-env notification-service EUREKA_INSTANCE_SECURE_PORT || true
           cf unset-env notification-service EUREKA_INSTANCE_NON_SECURE_PORT_ENABLED || true
-          cf set-env notification-service KAFKA_BOOTSTRAP_SERVERS "${{ secrets.KAFKA_BROKERS }}"
+          cf set-env notification-service SPRING_CLOUD_CONFIG_ENABLED false
+          cf set-env notification-service SPRING_KAFKA_BOOTSTRAP_SERVERS "$kafka_brokers"
+          cf set-env notification-service KAFKA_BOOTSTRAP_SERVERS "$kafka_brokers"
+          cf set-env notification-service SPRING_MAIL_HOST "$mail_host"
+          cf set-env notification-service SPRING_MAIL_PORT "$mail_port"
+          cf set-env notification-service MAIL_FROM "$mail_from"
+          cf set-env notification-service MAIL_TO "$mail_to"
+          if [ -n "$mail_username" ]; then
+            cf set-env notification-service SPRING_MAIL_USERNAME "$mail_username"
+          fi
+          if [ -n "$mail_password" ]; then
+            cf set-env notification-service SPRING_MAIL_PASSWORD "$mail_password"
+          fi
+          if [ -n "$mail_smtp_auth" ]; then
+            cf set-env notification-service MAIL_SMTP_AUTH "$mail_smtp_auth"
+          fi
+          if [ -n "$mail_smtp_starttls" ]; then
+            cf set-env notification-service MAIL_SMTP_STARTTLS "$mail_smtp_starttls"
+          fi
           cf set-env notification-service EUREKA_CLIENT_SERVICEURL_DEFAULTZONE "$eureka_url"
           cf set-env notification-service EUREKA_INSTANCE_PREFER_IP_ADDRESS false
           cf start notification-service || { cf logs notification-service --recent; exit 1; }
@@ -157,8 +215,19 @@ jobs:
           cf push gateway -f lafl-platform/gateway/manifest.yml --no-start
           cf unset-env gateway SPRING_CLOUD_GATEWAY_ROUTES_0_URI || true
           cf unset-env gateway SPRING_CLOUD_GATEWAY_ROUTES_1_URI || true
+          cf unset-env gateway SPRING_DATASOURCE_URL || true
+          cf unset-env gateway SPRING_DATASOURCE_USERNAME || true
+          cf unset-env gateway SPRING_DATASOURCE_PASSWORD || true
+          cf unset-env gateway KAFKA_BOOTSTRAP_SERVERS || true
+          cf set-env gateway SPRING_CLOUD_CONFIG_ENABLED false
           cf set-env gateway JWT_SECRET "${{ secrets.JWT_SECRET }}"
           cf set-env gateway EUREKA_CLIENT_SERVICEURL_DEFAULTZONE "$eureka_url"
+          if [ -n "$redis_host" ]; then
+            cf set-env gateway SPRING_DATA_REDIS_HOST "$redis_host"
+          fi
+          if [ -n "$redis_port" ]; then
+            cf set-env gateway SPRING_DATA_REDIS_PORT "$redis_port"
+          fi
           cf set-env gateway SHIPMENT_SERVICE_URI "https://${shipment_route}"
           cf set-env gateway USER_SERVICE_URI "https://${user_route}"
           cf set-env gateway QUOTE_SERVICE_URI "https://${quote_route}"
@@ -190,11 +259,33 @@ jobs:
             status="$(curl -s -o /tmp/gateway-health.json -w "%{http_code}" "https://${route}/api/health" || true)"
             if [ "$status" = "200" ]; then
               cat /tmp/gateway-health.json
-              exit 0
+              break
             fi
             sleep 10
           done
 
-          echo "Gateway health check failed."
-          cat /tmp/gateway-health.json || true
-          exit 1
+          if [ "${status:-}" != "200" ]; then
+            echo "Gateway health check failed."
+            cat /tmp/gateway-health.json || true
+            exit 1
+          fi
+
+          base="https://${route}"
+          tracking_status="$(curl -s -o /tmp/tracking.json -w "%{http_code}" "$base/api/v1/shipments/track?reference=LAFL-24017" || true)"
+          if [ "$tracking_status" -ge 500 ]; then
+            echo "Tracking endpoint returned server error."
+            cat /tmp/tracking.json || true
+            exit 1
+          fi
+
+          email="smoke+$(date +%s)@lafl.com"
+          signup_status="$(curl -s -o /tmp/signup.json -w "%{http_code}" -X POST "$base/api/v1/auth/signup" \
+            -H "Content-Type: application/json" \
+            -d "{\"name\":\"Smoke Test\",\"email\":\"${email}\",\"company\":\"LAFL\",\"password\":\"Password123\"}" || true)"
+          if [ "$signup_status" != "201" ]; then
+            echo "Signup smoke test failed."
+            cat /tmp/signup.json || true
+            exit 1
+          fi
+
+          echo "Smoke tests passed."

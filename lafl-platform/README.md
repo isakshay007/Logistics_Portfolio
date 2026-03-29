@@ -5,7 +5,7 @@ Production-style Spring Cloud microservices platform for LAFL logistics workflow
 ## Modules
 
 - `gateway` - Spring Cloud Gateway with JWT validation, RBAC edge policy, Redis rate limiter, and health/fallback endpoints
-- `config-server` - centralized config with shared overrides (`jwt.secret`, Redis host/port)
+- `config-server` - centralized config profile source (secrets injected at deploy time via `cf set-env`)
 - `eureka-server` - service discovery
 - `shipment-service` - shipment tracking + status updates + Redis caching
 - `user-service` - signup/login, BCrypt verification, JWT issuance
@@ -14,7 +14,7 @@ Production-style Spring Cloud microservices platform for LAFL logistics workflow
 
 ## Database Targets
 
-- Production/Cloud: Supabase PostgreSQL (`jdbc:postgresql://db.epvdfxwkqdaaeornsotb.supabase.co:5432/postgres`)
+- Production/Cloud: Supabase PostgreSQL via `DB_URL` secret (recommended: Supabase pooler URL)
 - Local development: `docker compose` PostgreSQL service
 
 ## Implemented Platform Features
@@ -42,12 +42,13 @@ Production-style Spring Cloud microservices platform for LAFL logistics workflow
 - Accepts `eventType` + `payload` and routes directly to notification dispatch logic
 - Event payloads are JSON POJOs with `eventType`, `timestamp`, and event-specific fields
 
-### Redis Caching (Shipment)
+### Shipment Caching
 
 - `@EnableCaching` enabled
 - Tracking lookup cached in `shipments` cache by reference
 - Cache evicted on shipment status updates
 - TTL configured to 10 minutes via `RedisCacheConfiguration`
+- Cloud deploy defaults to `SPRING_CACHE_TYPE=simple` for resilience unless Redis is explicitly configured
 
 ### OpenAPI / Swagger
 
@@ -91,11 +92,11 @@ Startup order for deployment:
 
 1. `config-server`
 2. `eureka-server`
-3. `gateway`
-4. `shipment-service`
-5. `user-service`
-6. `quote-service`
-7. `notification-service`
+3. `shipment-service`
+4. `user-service`
+5. `quote-service`
+6. `notification-service`
+7. `gateway`
 
 Flyway schema note for Supabase:
 
@@ -114,7 +115,7 @@ Jobs:
 
 1. `build-and-test` (Gradle test across modules)
 2. `deploy` (Cloud Foundry push in startup order)
-3. `smoke-test` (`GET /api/health` via gateway)
+3. `smoke-test` (gateway health + tracking endpoint + signup endpoint)
 
 ## Testing
 

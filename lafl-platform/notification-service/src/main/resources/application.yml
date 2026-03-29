@@ -5,25 +5,25 @@ spring:
   application:
     name: notification-service
   config:
-    import: optional:configserver:http://localhost:8888
+    import: optional:configserver:${CONFIG_SERVER_URL:http://localhost:8888}
   kafka:
-    bootstrap-servers: ${kafka.bootstrap-servers:localhost:9092}
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:${KAFKA_BOOTSTRAP_SERVERS:${kafka.bootstrap-servers:localhost:9092}}}
   mail:
-    host: smtp.gmail.com
-    port: 587
-    username: your_gmail@gmail.com
-    password: your_app_password
+    host: ${SPRING_MAIL_HOST:${MAIL_HOST:mailhog}}
+    port: ${SPRING_MAIL_PORT:${MAIL_PORT:1025}}
+    username: ${SPRING_MAIL_USERNAME:${MAIL_USERNAME:}}
+    password: ${SPRING_MAIL_PASSWORD:${MAIL_PASSWORD:}}
     properties:
       mail:
         smtp:
-          auth: true
+          auth: ${MAIL_SMTP_AUTH:false}
           starttls:
-            enable: true
+            enable: ${MAIL_SMTP_STARTTLS:false}
 
 lafl:
   mail:
-    from: no-reply@lafl-logistics.com
-    to: ops@lafl-logistics.com
+    from: ${MAIL_FROM:no-reply@lafl-logistics.com}
+    to: ${MAIL_TO:ops@lafl-logistics.com}
 
 eureka:
   client:

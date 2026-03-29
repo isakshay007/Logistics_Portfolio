@@ -4,6 +4,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.lafl.user.domain.UserAccount;
 import com.lafl.user.events.UserRegisteredEvent;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
@@ -12,6 +14,8 @@ import java.time.Instant;
 
 @Component
 public class KafkaUserEventPublisher implements UserEventPublisher {
+
+    private static final Logger logger = LoggerFactory.getLogger(KafkaUserEventPublisher.class);
 
     private final KafkaTemplate<String, String> kafkaTemplate;
     private final ObjectMapper objectMapper;
@@ -39,6 +43,9 @@ public class KafkaUserEventPublisher implements UserEventPublisher {
             kafkaTemplate.send(topic, userAccount.getId(), objectMapper.writeValueAsString(event));
         } catch (JsonProcessingException exception) {
             throw new IllegalStateException("Unable to serialize user registered event", exception);
+        } catch (RuntimeException exception) {
+            logger.warn("Kafka publish skipped for topic {} and user {}: {}", topic, userAccount.getId(),
+                exception.getMessage());
         }
     }
 }
