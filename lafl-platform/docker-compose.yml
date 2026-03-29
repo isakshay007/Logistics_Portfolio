@@ -1,0 +1,190 @@
+services:
+  # Local development database. Production/staging deployments use Supabase PostgreSQL.
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: lafl
+      POSTGRES_PASSWORD: lafl
+      POSTGRES_DB: lafl_user
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./docker/postgres/init-multiple-dbs.sh:/docker-entrypoint-initdb.d/init-multiple-dbs.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lafl -d lafl_user"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  kafka:
+    image: apache/kafka:3.9.2
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_NUM_PARTITIONS: 3
+
+  redis:
+    image: redis:7-alpine
+
+  config-server:
+    build:
+      context: .
+      dockerfile: Dockerfile.service
+      args:
+        MODULE_NAME: config-server
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      JWT_SECRET: local-dev-jwt-secret-2026-abcdef1234567890
+    depends_on:
+      - kafka
+      - redis
+    ports:
+      - "8888:8888"
+
+  eureka-server:
+    build:
+      context: .
+      dockerfile: Dockerfile.service
+      args:
+        MODULE_NAME: eureka-server
+    depends_on:
+      - config-server
+    ports:
+      - "8761:8761"
+
+  gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile.service
+      args:
+        MODULE_NAME: gateway
+    depends_on:
+      - config-server
+      - eureka-server
+      - redis
+    environment:
+      SPRING_CONFIG_IMPORT: optional:configserver:http://config-server:8888
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      JWT_SECRET: local-dev-jwt-secret-2026-abcdef1234567890
+    ports:
+      - "8080:8080"
+
+  shipment-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.service
+      args:
+        MODULE_NAME: shipment-service
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+      config-server:
+        condition: service_started
+      eureka-server:
+        condition: service_started
+    environment:
+      SPRING_CONFIG_IMPORT: optional:configserver:http://config-server:8888
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/lafl_shipment?currentSchema=shipment_service
+      SPRING_DATASOURCE_USERNAME: lafl
+      SPRING_DATASOURCE_PASSWORD: lafl
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      JWT_SECRET: local-dev-jwt-secret-2026-abcdef1234567890
+
+  user-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.service
+      args:
+        MODULE_NAME: user-service
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+      config-server:
+        condition: service_started
+      eureka-server:
+        condition: service_started
+    environment:
+      SPRING_CONFIG_IMPORT: optional:configserver:http://config-server:8888
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/lafl_user?currentSchema=user_service
+      SPRING_DATASOURCE_USERNAME: lafl
+      SPRING_DATASOURCE_PASSWORD: lafl
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      JWT_SECRET: local-dev-jwt-secret-2026-abcdef1234567890
+
+  quote-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.service
+      args:
+        MODULE_NAME: quote-service
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+      config-server:
+        condition: service_started
+      eureka-server:
+        condition: service_started
+    environment:
+      SPRING_CONFIG_IMPORT: optional:configserver:http://config-server:8888
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/lafl_quote?currentSchema=quote_service
+      SPRING_DATASOURCE_USERNAME: lafl
+      SPRING_DATASOURCE_PASSWORD: lafl
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      JWT_SECRET: local-dev-jwt-secret-2026-abcdef1234567890
+
+  notification-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.service
+      args:
+        MODULE_NAME: notification-service
+    depends_on:
+      kafka:
+        condition: service_started
+      config-server:
+        condition: service_started
+      eureka-server:
+        condition: service_started
+    environment:
+      SPRING_CONFIG_IMPORT: optional:configserver:http://config-server:8888
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/lafl_user?currentSchema=user_service
+      SPRING_DATASOURCE_USERNAME: lafl
+      SPRING_DATASOURCE_PASSWORD: lafl
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      JWT_SECRET: local-dev-jwt-secret-2026-abcdef1234567890
+      SPRING_MAIL_HOST: mailhog
+      SPRING_MAIL_PORT: 1025
+
+  mailhog:
+    image: mailhog/mailhog:v1.0.1
+    platform: linux/amd64
+    ports:
+      - "8025:8025"
+
+volumes:
+  postgres-data:

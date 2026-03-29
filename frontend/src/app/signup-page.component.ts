@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { ApiService } from './api.service';
@@ -22,6 +22,7 @@ interface Notice {
 export class SignupPageComponent {
   private readonly api = inject(ApiService);
   private readonly router = inject(Router);
+  private readonly cdr = inject(ChangeDetectorRef);
 
   signupForm = {
     name: '',
@@ -44,13 +45,13 @@ export class SignupPageComponent {
 
     this.api.submitSignup(this.signupForm).subscribe({
       next: () => {
+        this.isSubmitting = false;
         this.notice = {
           type: 'success',
-          text: 'Portal account created. Redirecting to success page...',
+          text: 'Portal account created successfully.',
         };
-        setTimeout(() => {
-          this.router.navigateByUrl('/signup-success');
-        }, 700);
+        this.cdr.detectChanges();
+        this.router.navigateByUrl('/signup-success');
       },
       error: (error: HttpErrorResponse) => {
         this.isSubmitting = false;
@@ -58,6 +59,7 @@ export class SignupPageComponent {
           type: 'error',
           text: error.error?.message || 'Signup failed. Please try again.',
         };
+        this.cdr.detectChanges();
       },
     });
   }

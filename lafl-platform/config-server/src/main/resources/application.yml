@@ -1,0 +1,32 @@
+server:
+  port: 8888
+
+spring:
+  application:
+    name: config-server
+  cloud:
+    config:
+      server:
+        native:
+          search-locations: classpath:/config
+        overrides:
+          spring:
+            datasource:
+              url: ${DB_URL:jdbc:postgresql://db.epvdfxwkqdaaeornsotb.supabase.co:5432/postgres}
+              username: ${DB_USER:postgres}
+              password: ${DB_PASS:lafl}
+          jwt:
+            secret: ${JWT_SECRET:lafl-config-server-dev-secret-2026-change-me-1234567890}
+          kafka:
+            bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+          redis:
+            host: ${REDIS_HOST:localhost}
+            port: ${REDIS_PORT:6379}
+  profiles:
+    active: native
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info

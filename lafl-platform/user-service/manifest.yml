@@ -1,0 +1,16 @@
+applications:
+  - name: user-service
+    path: build/libs/user-service-0.1.0-SNAPSHOT.jar
+    memory: 512M
+    instances: 1
+    no-route: true
+    buildpacks:
+      - java_buildpack
+    env:
+      CF_APP_NAME: user-service
+      SPRING_PROFILES_ACTIVE: cloud
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db.epvdfxwkqdaaeornsotb.supabase.co:5432/postgres
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: ((SPRING_DATASOURCE_PASSWORD))
+      KAFKA_BOOTSTRAP_SERVERS: ((KAFKA_BOOTSTRAP_SERVERS))
+      JWT_SECRET: ((JWT_SECRET))

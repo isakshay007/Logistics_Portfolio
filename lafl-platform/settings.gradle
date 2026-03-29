@@ -1,0 +1,9 @@
+rootProject.name = 'lafl-platform'
+
+include 'gateway'
+include 'eureka-server'
+include 'config-server'
+include 'shipment-service'
+include 'user-service'
+include 'notification-service'
+include 'quote-service'

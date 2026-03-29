@@ -1,0 +1,49 @@
+<main class="auth-shell">
+  <section class="auth-panel auth-panel-highlight">
+    <a class="brand" routerLink="/">
+      <span class="brand-mark">LAFL</span>
+      <span class="brand-copy">Peace. Delivered.</span>
+    </a>
+    <p class="eyebrow">Client Portal</p>
+    <h1>Welcome back to your logistics control room.</h1>
+    <p>
+      Sign in to access live shipment tracking, quote coordination, and contact workflows in one
+      place.
+    </p>
+    <ul class="check-list">
+      <li>Track active shipments in real time</li>
+      <li>Review quote and contact submissions quickly</li>
+      <li>Coordinate teams with fewer handoff delays</li>
+    </ul>
+  </section>
+
+  <section class="auth-panel">
+    <p class="eyebrow">Sign In</p>
+    <h2>Use your portal credentials.</h2>
+    <form class="form-panel auth-form" (ngSubmit)="submitLogin()">
+      <div class="form-grid">
+        <label class="full-span">
+          Work Email
+          <input name="email" type="email" [(ngModel)]="loginForm.email" required />
+        </label>
+        <label class="full-span">
+          Password
+          <input
+            name="password"
+            type="password"
+            minlength="8"
+            [(ngModel)]="loginForm.password"
+            required
+          />
+        </label>
+      </div>
+      <button class="button" type="submit" [disabled]="isSubmitting">
+        {{ isSubmitting ? 'Signing in...' : 'Sign In' }}
+      </button>
+    </form>
+  </section>
+</main>
+
+<div class="toast" [class.is-visible]="notice" [class.is-error]="notice?.type === 'error'" aria-live="polite">
+  {{ notice?.text }}
+</div>

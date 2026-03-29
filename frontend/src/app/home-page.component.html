@@ -22,6 +22,9 @@
       <a href="#tracker" (click)="closeNav()">Track</a>
       <a href="#quote" (click)="closeNav()">Get Quote</a>
       <a href="#contact" (click)="closeNav()">Contact</a>
+      <a class="button button-small button-ghost" routerLink="/login" (click)="closeNav()">
+        Login
+      </a>
       <a class="button button-small button-ghost" routerLink="/signup" (click)="closeNav()">
         Client Portal
       </a>
@@ -137,7 +140,9 @@
               [(ngModel)]="trackingReference"
               required
             />
-            <button class="button" type="submit">Track</button>
+            <button class="button" type="submit" [disabled]="trackingLoading">
+              {{ trackingLoading ? 'Tracking...' : 'Track' }}
+            </button>
           </div>
         </form>
 
@@ -258,7 +263,16 @@
               <textarea name="cargoDetails" rows="5" [(ngModel)]="quoteForm.cargoDetails"></textarea>
             </label>
           </div>
-          <button class="button" type="submit">Submit Quote Request</button>
+          <button class="button" type="submit" [disabled]="isQuoteSubmitting">
+            {{ isQuoteSubmitting ? 'Submitting...' : 'Submit Quote Request' }}
+          </button>
+          <p
+            *ngIf="quoteStatusMessage"
+            class="placeholder-copy"
+            [style.color]="quoteStatusType === 'error' ? '#b42318' : '#067647'"
+          >
+            {{ quoteStatusMessage }}
+          </p>
         </form>
 
         <aside class="panel callout-panel">
@@ -307,7 +321,16 @@
               <textarea name="message" rows="5" [(ngModel)]="contactForm.message" required></textarea>
             </label>
           </div>
-          <button class="button" type="submit">Send Message</button>
+          <button class="button" type="submit" [disabled]="isContactSubmitting">
+            {{ isContactSubmitting ? 'Sending...' : 'Send Message' }}
+          </button>
+          <p
+            *ngIf="contactStatusMessage"
+            class="placeholder-copy"
+            [style.color]="contactStatusType === 'error' ? '#b42318' : '#067647'"
+          >
+            {{ contactStatusMessage }}
+          </p>
         </form>
       </div>
     </section>

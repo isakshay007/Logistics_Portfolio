@@ -1,6 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
+import { tap } from 'rxjs/operators';
 
 export interface TrackingIssue {
   severity: string;
@@ -33,7 +34,6 @@ export interface Shipment {
 }
 
 export interface TrackingResponse {
-  sampleIssueReference: string;
   shipment: Shipment;
 }
 
@@ -42,13 +42,23 @@ export interface ApiMessageResponse {
   redirectTo?: string;
 }
 
+export interface AuthResponse {
+  token: string;
+  tokenType: string;
+  expiresIn: number;
+  email: string;
+  roles: string[];
+}
+
 @Injectable({ providedIn: 'root' })
 export class ApiService {
   private readonly http = inject(HttpClient);
+  private readonly gatewayBaseUrl = 'http://localhost:8080';
+  private authToken: string | null = null;
 
   track(reference: string): Observable<TrackingResponse> {
     return this.http.get<TrackingResponse>(
-      `/api/track?reference=${encodeURIComponent(reference)}`
+      `${this.gatewayBaseUrl}/api/v1/shipments/track?reference=${encodeURIComponent(reference)}`
     );
   }
 
@@ -58,7 +68,10 @@ export class ApiService {
     company: string;
     message: string;
   }): Observable<ApiMessageResponse> {
-    return this.http.post<ApiMessageResponse>('/api/contact', payload);
+    return this.http.post<ApiMessageResponse>(
+      `${this.gatewayBaseUrl}/api/v1/contacts`,
+      payload
+    );
   }
 
   submitQuote(payload: {
@@ -71,7 +84,10 @@ export class ApiService {
     shipmentType: string;
     cargoDetails: string;
   }): Observable<ApiMessageResponse> {
-    return this.http.post<ApiMessageResponse>('/api/quotes', payload);
+    return this.http.post<ApiMessageResponse>(
+      `${this.gatewayBaseUrl}/api/v1/quotes`,
+      payload
+    );
   }
 
   submitSignup(payload: {
@@ -81,7 +97,29 @@ export class ApiService {
     phone: string;
     interest: string;
     password: string;
-  }): Observable<ApiMessageResponse> {
-    return this.http.post<ApiMessageResponse>('/api/signup', payload);
+  }): Observable<AuthResponse> {
+    return this.http.post<AuthResponse>(
+      `${this.gatewayBaseUrl}/api/v1/auth/signup`,
+      payload
+    ).pipe(
+      tap((response) => {
+        this.authToken = response.token;
+      })
+    );
+  }
+
+  login(email: string, password: string): Observable<AuthResponse> {
+    return this.http.post<AuthResponse>(
+      `${this.gatewayBaseUrl}/api/v1/auth/login`,
+      { email, password }
+    ).pipe(
+      tap((response) => {
+        this.authToken = response.token;
+      })
+    );
+  }
+
+  getAuthToken(): string | null {
+    return this.authToken;
   }
 }

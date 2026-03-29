@@ -1,161 +1,223 @@
-# LAFL Logistics Portal
+# LAFL Logistics Platform
 
-Modern logistics platform with an Angular 21 frontend and Express backend for lead capture, shipment visibility, and operations monitoring.
+Cloud-native logistics portfolio platform with an Angular 21 frontend and a Spring Boot microservices backend behind Spring Cloud Gateway.
 
-Live URL: [https://lafl-logistics-portal-496585032737.us-central1.run.app](https://lafl-logistics-portal-496585032737.us-central1.run.app)
+## What Recruiters Can Validate Quickly
 
-## Why This Project
+- Real microservices decomposition (Gateway + Config Server + Eureka + 4 domain services)
+- JWT auth and RBAC enforced at the gateway edge
+- Redis caching with explicit TTL + eviction behavior
+- OpenAPI/Swagger docs on core services
+- Cloud Foundry manifests + GitHub Actions CI/CD pipeline
+- One-command local startup with Docker Compose
 
-This project was rebuilt end-to-end to demonstrate practical full-stack ownership:
-
-- Angular 21 single-page frontend with responsive UX
-- production-style API design with validation
-- cloud-native persistence on Firestore
-- email notifications through Gmail SMTP
-- Cloud Run deployment and environment-driven configuration
-- protected operations endpoints for internal monitoring
-
-## Core Capabilities
-
-- Angular-routed pages for home, signup, and signup-success flows
-- Shipment tracking API and UI with issue-state simulation
-- Contact, quote, and signup workflows
-- Firestore persistence in cloud mode with local JSON fallback
-- Notification email templates for inbound submissions
-- Ops APIs secured by `OPS_API_KEY`
-
-## Demo Shipment IDs
-
-- `LAFL-24017` (healthy path)
-- `LAFL-98241` (active issues)
-- `LAFL-77802` (low-priority exception)
-
-## Architecture
+## Current Architecture (Primary Path)
 
 ```mermaid
 flowchart LR
-  A["Client Browser (Angular 21 SPA)"] --> B["Express API + Static Host (Cloud Run)"]
-  B --> C["Firestore"]
-  B --> D["Gmail SMTP (App Password)"]
-  E["Ops User (x-ops-key)"] --> B
+  UI["Angular 21 Frontend"] --> GW["Spring Cloud Gateway :8080"]
+  GW --> USER["user-service"]
+  GW --> SHIP["shipment-service"]
+  GW --> QUOTE["quote-service"]
+  USER --> PG[("PostgreSQL")]
+  SHIP --> PG
+  QUOTE --> PG
+  SHIP --> REDIS[("Redis")]
+  GW --> NOTIF["notification-service"]
+  NOTIF --> SMTP["SMTP / MailHog"]
+  CFG["config-server"] --> GW
+  CFG --> USER
+  CFG --> SHIP
+  CFG --> QUOTE
+  CFG --> NOTIF
+  EUREKA["eureka-server"] --> GW
+  EUREKA --> USER
+  EUREKA --> SHIP
+  EUREKA --> QUOTE
+  EUREKA --> NOTIF
 ```
 
-## API Reference
+## Implemented Backend Capabilities
 
-Public endpoints:
+### API Gateway (Spring Cloud Gateway)
 
-- `GET /api/health`
-- `GET /api/track?reference=LAFL-98241`
-- `POST /api/contact`
-- `POST /api/quotes`
-- `POST /api/signup`
+- JWT Bearer validation using `jwt.secret` from Config Server
+- Adds `X-User-Id` and `X-User-Role` headers downstream after successful auth
+- Route policy:
+  - Public: `GET /api/v1/shipments/track`, `POST /api/v1/quotes/**`, `POST /api/v1/contacts/**`, `POST /api/v1/auth/**`
+  - Valid JWT required: `POST /api/v1/shipments/**`
+  - `ROLE_OPS` required: `GET /api/v1/ops/**`
+- Gateway health endpoint: `GET /api/health`
 
-Protected ops endpoints (`x-ops-key` required):
+### User Service
 
-- `GET /api/ops/overview`
-- `GET /api/ops/issues`
+- `POST /api/v1/auth/signup`
+- `POST /api/v1/auth/login` with BCrypt password verification
+- JWT issuance with `sub`, `role`, `iat`, `exp` (24h)
+- Uses PostgreSQL via JPA repository (`UserAccountRepository`)
 
-## Quick Start (Local)
+### Shipment Service
 
-1. Install backend dependencies:
-   ```bash
-   npm install
-   ```
-2. Install frontend dependencies:
-   ```bash
-   npm --prefix frontend install
-   ```
-3. Authenticate ADC for Firestore (optional but recommended):
-   ```bash
-   gcloud auth application-default login
-   ```
-4. Copy environment template and fill values:
-   ```bash
-   cp .env.example .env
-   ```
-5. Build Angular frontend:
-   ```bash
-   npm run frontend:build
-   ```
-6. Run the app:
-   ```bash
-   npm run dev
-   ```
-7. Open:
-   `http://localhost:3000`
+- Tracking and status update APIs (`/api/v1/shipments/...`)
+- Redis caching:
+  - `@Cacheable` on tracking lookup (`shipments` cache)
+  - `@CacheEvict` on status update
+  - TTL configured to 10 minutes
 
-## Environment Variables
+### Quote Service
 
-Use `.env.example` as a template.
+- `POST /api/v1/quotes`
+- `POST /api/v1/contacts`
+- Ops read endpoints:
+  - `GET /api/v1/ops/overview`
+  - `GET /api/v1/ops/issues`
 
-- `PORT`: app port (default `3000`)
-- `APP_BASE_URL`: public app URL used in email templates
-- `PROJECT_ID`: Google Cloud project id
-- `USE_FIRESTORE`: `true` to persist in Firestore
-- `OPS_API_KEY`: required for ops endpoints
-- `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`: SMTP server settings
-- `SMTP_USER`, `SMTP_PASS`: SMTP credentials
-- `MAIL_FROM`, `MAIL_TO`: sender and recipient inboxes
+### Notification Service
 
-## Deploy to Cloud Run
+- Dispatches event-specific notification email logic (SMTP)
+- Demo trigger endpoint: `POST /api/v1/notifications/trigger`
 
-Prerequisites:
+### OpenAPI / Swagger
 
-- Google Cloud SDK installed
-- billing enabled
-- `Cloud Run Admin API`, `Cloud Build API`, and `Firestore API` enabled
-- Firestore database created in Native mode
+Enabled for:
 
-Deploy:
+- `shipment-service`
+- `user-service`
+- `quote-service`
+
+Endpoints per service:
+
+- Swagger UI: `/swagger-ui.html`
+- OpenAPI JSON: `/v3/api-docs`
+
+Each includes a Bearer JWT security scheme for authenticated endpoint testing.
+
+## Frontend Integration
+
+Angular app is now wired to the Spring gateway (`http://localhost:8080`) in `frontend/src/app/api.service.ts` for:
+
+- shipment tracking
+- quote submission
+- contact submission
+- user signup
+
+## Database Targets
+
+- Production/Cloud: Supabase PostgreSQL (`jdbc:postgresql://db.epvdfxwkqdaaeornsotb.supabase.co:5432/postgres`)
+- Local development: Docker Compose PostgreSQL container
+
+## Local Development
+
+### Prerequisites
+
+- Docker + Docker Compose
+- Java 17+
+- Node.js 20+
+
+### 1. Start Platform Stack (one command)
 
 ```bash
-export PROJECT_ID=logistics-491417
-export REGION=us-central1
-export USE_FIRESTORE=true
-export OPS_API_KEY="$(openssl rand -hex 32)"
-export SMTP_USER="your_gmail@gmail.com"
-export SMTP_PASS="your_16_digit_app_password"
-export MAIL_FROM="your_gmail@gmail.com"
-export MAIL_TO="your_gmail@gmail.com"
-./deploy/cloud-run.sh
+docker compose -f lafl-platform/docker-compose.yml up --build
 ```
 
-## Jenkins CI
+This starts PostgreSQL, Redis, Config Server, Eureka, Gateway, shipment-service, user-service, quote-service, and notification-service.
+For production deployments, services connect to Supabase PostgreSQL through environment variables.
 
-This repository now includes a root `Jenkinsfile` tailored to the current stack (Express backend + Angular frontend).
+Useful local endpoints:
+
+- Gateway: `http://localhost:8080`
+- Config Server: `http://localhost:8888`
+- Eureka: `http://localhost:8761`
+- MailHog UI: `http://localhost:8025`
+
+### 2. Run Angular Frontend
+
+```bash
+npm --prefix frontend install
+npm --prefix frontend start
+```
+
+Frontend dev URL: `http://localhost:4200`
+
+### 3. Run Test Suite
+
+```bash
+gradle -p lafl-platform test
+```
+
+## Quick API Smoke Flow
+
+### Signup
+
+```bash
+curl -X POST http://localhost:8080/api/v1/auth/signup \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name":"Demo User",
+    "email":"demo@example.com",
+    "company":"LAFL",
+    "phone":"555-0100",
+    "interest":"Ops dashboard",
+    "password":"password123"
+  }'
+```
+
+### Login and extract JWT
+
+```bash
+TOKEN=$(curl -s -X POST http://localhost:8080/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"demo@example.com","password":"password123"}' | jq -r '.token')
+```
+
+### Try ROLE_OPS route
+
+```bash
+curl -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/v1/ops/overview
+```
+
+## CI/CD
+
+GitHub Actions workflow: `.github/workflows/lafl-platform-ci.yml`
 
 Pipeline stages:
 
-- install backend and frontend dependencies with `npm ci`
-- run Angular unit tests (`npm --prefix frontend run test -- --watch=false`)
-- build Angular production bundle (`npm run build`)
-- smoke test backend health endpoint (`GET /api/health`)
+1. `build-and-test` (runs `gradle -p lafl-platform test`)
+2. `deploy` (Cloud Foundry `cf push` in startup order)
+3. `smoke-test` (`GET /api/health` through gateway)
 
-Notes:
+Required GitHub Secrets:
 
-- The frontend production config disables font inlining (`fonts: false`) to avoid CI failures when external font hosts are unreachable.
-- Build artifacts and smoke logs are archived: `frontend/dist/**`, `health.json`, and `backend-smoke.log`.
+- `CF_API`
+- `CF_USERNAME`
+- `CF_PASSWORD`
+- `CF_ORG`
+- `CF_SPACE`
+- `JWT_SECRET`
+- `DB_PASS`
+- `KAFKA_BROKERS`
 
-## Security Notes
+## Cloud Foundry Deployment
 
-- Do not commit `.env` or real credentials.
-- Use Gmail app passwords, never your primary Gmail password.
-- If any secret is accidentally exposed, rotate it immediately.
-- Passwords are stored as salted hashes.
+Manifests exist per module under `lafl-platform/*/manifest.yml`.
 
-## Repository Structure
+Startup order:
 
-- `frontend/`: Angular 21 application source
-- `index.js`: Express server and API routes
-- `public/`: legacy fallback assets and static media
-- `data/`: local fallback data store
-- `deploy/cloud-run.sh`: deployment helper
-- `Dockerfile`: container definition
+1. `config-server`
+2. `eureka-server`
+3. `gateway`
+4. `shipment-service`
+5. `user-service`
+6. `quote-service`
+7. `notification-service`
 
-## Portfolio Talking Points
+## Repository Layout
 
-- End-to-end migration from legacy static pages to Angular + cloud-ready architecture
-- Firestore-backed server logic with environment-aware fallback
-- Operational observability via protected summary endpoints
-- Real-world notification path integrated with Gmail SMTP
-- Responsive, high-contrast UI with improved UX for form workflows
+- `frontend/` Angular 21 SPA
+- `lafl-platform/` Spring Cloud microservices platform
+- `index.js` legacy Express backend retained from pre-migration implementation
+- `deploy/` legacy deployment scripts
+
+## Legacy Note
+
+This repo still contains the original Express/Cloud Run implementation for historical context, but active end-to-end platform work is centered on the Spring microservices stack under `lafl-platform/`.
